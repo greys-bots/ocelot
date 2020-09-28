@@ -74,6 +74,49 @@ module.exports = {
 		}
 	},
 
+	genReactPosts: async (bot, roles, info = {}) => {
+		return new Promise(async res => {
+			var embeds = [];
+			var current = { embed: {
+				title: info.title,
+				description: info.description,
+				fields: [],
+				footer: info.footer
+			}, roles: [], emoji: []};
+			
+			for(let i=0; i<roles.length; i++) {
+				if(current.embed.fields.length < 10) {
+					current.embed.fields.push({
+						name: `${roles[i].raw.name} (${roles[i].emoji.includes(":") ? `<${roles[i].emoji}>` : roles[i].emoji})`,
+						value: `description: ${roles[i].description || "*(no description provided)*"}\npreview: ${roles[i].raw}`
+					});
+					current.roles.push(roles[i].id);
+					current.emoji.push(roles[i].emoji);
+				} else {
+					embeds.push(current);
+					current = { embed: {
+						title: info.title,
+						description: info.description,
+						fields: [],
+						footer: info.footer
+					}, roles: [], emoji: []};
+					current.embed.fields.push({
+						name: `${roles[i].raw.name} (${roles[i].emoji.includes(":") ? `<${roles[i].emoji}>` : roles[i].emoji})`,
+						value: `description: ${roles[i].description || "*(no description provided)*"}\npreview: ${roles[i].raw}`
+					});
+					current.roles.push(roles[i].id);
+					current.emoji.push(roles[i].emoji);
+				}
+			}
+			embeds.push(current);
+			if(embeds.length > 1) {
+				for(let i = 0; i < embeds.length; i++)
+					embeds[i].embed.title += ` (part ${i+1}/${embeds.length})`;
+			}
+			res(embeds);
+		})
+	},
+
 	getConfirmation: async (bot, msg, user) => {
 		return new Promise(res => {
 
@@ -117,6 +160,73 @@ module.exports = {
 				bot.removeListener('message', msgListener);
 				bot.removeListener('messageReactionAdd', reactListener);
 				res({confirmed: false, msg: 'mrr! error: timed out.'})
+			}, 30000);
+
+			bot.on('message', msgListener);
+			bot.on('messageReactionAdd', reactListener);
+		})
+	},
+	handleChoices: async (bot, msg, user, choices) => {
+		/*
+			example usage pseudo-code:
+			choices = [
+				{
+					accepted: ['y', 'yes', 'yeah', '✅'],
+					name: 'yes',
+					msg: 'You picked `yes`.'
+				},
+				{
+					accepted: ['n', 'no', 'nah', '❌'],
+					name: 'no',
+					msg: 'You picked `no`.'
+				}
+			]
+
+			chosen = await handleChoices(...args);
+
+			switch(chosen.name) {
+				case 'yes':
+				case 'no':
+					return chosen.msg;
+					break;
+				case 'invalid':
+					return 'You picked something else.';
+					break;
+				default:
+					return 'You picked nothing.'
+					break;
+			}
+		*/
+		return new Promise(res => {
+
+			function msgListener(message) {
+				if(message.channel.id != msg.channel.id ||
+				   message.author.id != user.id) return;
+
+				clearTimeout(timeout);
+				bot.removeListener('message', msgListener);
+				bot.removeListener('messageReactionAdd', reactListener);
+				var choice = choices.find(c => c.accepted.includes(message.content.toLowerCase()));
+				if(choice) return res({...choice, message});
+				else return res({choice: 'invalid', message, msg: 'mrr! invalid choice.'});
+			}
+
+			function reactListener(react, ruser) {
+				if(react.message.channel.id != msg.channel.id ||
+				   ruser.id != user.id) return;
+
+				clearTimeout(timeout);
+				bot.removeListener('message', msgListener);
+				bot.removeListener('messageReactionAdd', reactListener);
+				var choice = choices.find(c => c.accepted.includes(react.emoji.name));
+				if(choice) return res({...choice, react});
+				else return res({choice: 'invalid', react, msg: 'mrr! invalid choice.'});
+			}
+
+			const timeout = setTimeout(async () => {
+				bot.removeListener('message', msgListener);
+				bot.removeListener('messageReactionAdd', reactListener);
+				res({choice: 'none', msg: 'mrr! action timed out.'})
 			}, 30000);
 
 			bot.on('message', msgListener);

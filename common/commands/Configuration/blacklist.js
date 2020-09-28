@@ -1,11 +1,13 @@
 module.exports = {
 	help: ()=> "Blacklist bot usage to specific users/roles",
-	usage: ()=> [" - Lists users/roles that have been blacklisted",
-				 " add [user/role] ... - Adds users/roles to the blacklist",
-				 " remove [user/role] ... - Removes users/roles from the blacklist",
-				 " clear - Clears the blacklist",
-				 " on - Turns on the blacklist. Turns off the whitelist if it's active",
-				 " off - Turns off the blacklist, but preserves the data there"],
+	usage: ()=> [
+		" - Lists users/roles that have been blacklisted",
+		" add [user/role] ... - Adds users/roles to the blacklist",
+		" remove [user/role] ... - Removes users/roles from the blacklist",
+		" clear - Clears the blacklist",
+		" on - Turns on the blacklist. Turns off the whitelist if it's active",
+		" off - Turns off the blacklist, but preserves the data there"
+	],
 	desc: ()=> "NOTE: Mods (aka those with permission to `MANAGE_MESSAGES`) will still be able to use the bot no matter what",
 	execute: async (bot, msg, args) => {
 		var config = await bot.stores.usages.get(msg.guild.id);

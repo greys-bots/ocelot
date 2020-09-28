@@ -12,33 +12,31 @@ module.exports = {
 			modules.forEach(m => m.commands = m.commands.map(c => c));
 
 			var embeds = [{embed: {
-				title: 'About',
-				description: "Hello. I am Ender. I help you make and manage starboards in your server. Here are some of my features:",
+				title: 'about',
+				description: "mrr~ i'm ocelot. i handle roles. here's some info about that:",
 				fields: [
 					{
-						name: 'Multiple starboards per server',
-						value: "Every server can make as many starboards as they'd like."
+						name: 'Unlimited reaction roles',
+						value: "Every server can have as many reaction roles as they'd like"
 					},
 					{
-						name: 'Individual starboard customization',
-						value: [
-							'Every starboard has its own tolerance and mod override configuration, ',
-							'in addition to global configurations for new starboards.'
-						].join('')
+						name: 'Reaction categories',
+						value: "Reaction roles can be placed in categories, with no limit of " +
+							   "how many roles can be in them."
 					},
 					{
 						name: 'Simple syntax',
 						value: [
-							'Almost all of my commands can be shortened to single letter ',
-							'aliases, allowing you to type as little as possible. Commands are ',
+							'Almost all commands can be shortened to aliases with only a few ',
+							'characters, allowing you to type as little as possible. Commands are ',
 							'also straightforward and clear in what they do.'
 						].join('')
 					}
 				],
-				color: parseInt('cc55ff', 16),
+				color: parseInt('ffeebb', 16),
 				footer: {
 					icon_url: bot.user.avatarURL(),
-					text: "Use the reactions below to flip pages."
+					text: "use the reactions below to flip pages~"
 				}
 			}}];
 			for(var i = 0; i < modules.length; i++) {
@@ -50,7 +48,7 @@ module.exports = {
 					color: parseInt(modules[i].color, 16) || parseInt("555555", 16),
 					footer: {
 						icon_url: bot.user.avatarURL(),
-						text: "I am Ender. I help you manage starboards."
+						text: "prrr~"
 					}
 				}, 10, {addition: ""})
 				
@@ -79,7 +77,7 @@ module.exports = {
 				color: parseInt(command.module.color, 16) || parseInt("555555", 16),
 				footer: {
 					icon_url: bot.user.avatarURL(),
-					text: "Arguments like [this] are required, arguments like <this> are optional."
+					text: "arguments like [this] are required, arguments like <this> are optional."
 				}
 			}};
 			if(command.desc) embed.embed.fields.push({name: "**Extra Info**", value: command.desc()});
@@ -88,7 +86,7 @@ module.exports = {
 			return embed;
 		} else {
 			let module = bot.modules.get(args[0].toLowerCase());
-			if(!module) return "Command/module not found";
+			if(!module) return "mrr! couldn't find that command or module.";
 			module.commands = module.commands.map(c => c);
 
 			var embeds = await bot.utils.genEmbeds(bot, module.commands, c => {
@@ -99,7 +97,7 @@ module.exports = {
 				color: parseInt(module.color, 16) || parseInt("555555", 16),
 				footer: {
 						icon_url: bot.user.avatarURL(),
-						text: "I am Ender. I help you manage starboards."
+						text: "prrr~"
 					}
 			}, 10, {addition: ""});
 

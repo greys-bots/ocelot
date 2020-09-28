@@ -106,8 +106,7 @@ class ReactPostStore extends Collection {
 
 				var msg;
 				try {
-					var guild = this.bot.guilds.resolve(server);
-					var channel = guild.channels.resolve(data.rows[0].channel_id);
+					var channel = await this.bot.channels.fetch(data.rows[0].channel_id);
 					msg = await channel.messages.fetch(data.rows[0].message_id);
 				} catch(e) {
 					console.log(e);
@@ -145,8 +144,7 @@ class ReactPostStore extends Collection {
 
 				var msg;
 				try {
-					var guild = this.bot.guilds.resolve(server);
-					var channel = guild.channels.resolve(data.rows[0].channel_id);
+					var channel = await this.bot.channels.fetch(data.rows[0].channel_id);
 					msg = await channel.messages.fetch(data.rows[0].message_id);
 				} catch(e) {
 					console.log(e);
@@ -185,8 +183,7 @@ class ReactPostStore extends Collection {
 
 					var msg;
 					try {
-						var guild = this.bot.guilds.resolve(server);
-						var channel = guild.channels.resolve(data.rows[i].channel_id);
+						var channel = await this.bot.channels.fetch(data.rows[i].channel_id);
 						msg = await channel.messages.fetch(data.rows[i].message_id);
 					} catch(e) {
 						console.log(e);
@@ -226,8 +223,7 @@ class ReactPostStore extends Collection {
 
 					var msg;
 					try {
-						var guild = this.bot.guilds.resolve(server);
-						var channel = guild.channels.resolve(data.rows[i].channel_id);
+						var channel = await this.bot.channels.fetch(data.rows[i].channel_id);
 						msg = await channel.messages.fetch(data.rows[i].message_id);
 					} catch(e) {
 						console.log(e);
@@ -262,7 +258,6 @@ class ReactPostStore extends Collection {
 
 	async update(server, message, data = {}) {
 		return new Promise(async (res, rej) => {
-			console.log(data);
 			try {
 				if(data.roles || data.single || data.required)
 					await this.db.query(`UPDATE reactposts SET roles = $1, single = $2, required = $3 WHERE server_id = $4 AND message_id = $5`,
@@ -273,9 +268,8 @@ class ReactPostStore extends Collection {
 			}
 			
 			var post = await this.get(server, message, true);
-			console.log(post);
 
-			if(post.message && post.message.embeds[0] && post.message.author.id == this.bot.user.id) { //react post from us
+			if(post.message?.embeds[0] && post.message.author.id == this.bot.user.id) { //react post from us
 				if(!data.embed && data.roles) { //regen roles
 					data = await this.bot.utils.genReactPosts(this.bot, post.roles, {
 						title: post.message.embeds[0].title,
@@ -285,12 +279,11 @@ class ReactPostStore extends Collection {
 					data = data[0];
 				}
 
-				console.log(data);
 				if(data.embed) {
 					try {
-						await this.bot.editMessage(post.channel_id, post.message_id, {embed: data.embed});
-						await this.bot.removeMessageReactions(post.channel_id, post.message_id);
-						for(emoji of data.emoji) await this.bot.addMessageReaction(post.channel_id, post.message_id, emoji);
+						await post.message.edit({embed: data.embed});
+						await post.message.reactions.removeAll()
+						for(emoji of data.emoji) await post.message.react(emoji);
 					} catch(e) {
 						console.log(e);
 						return rej(e.message);
@@ -298,16 +291,18 @@ class ReactPostStore extends Collection {
 				} else if(!data.embed && post.page > 0) {
 					try {
 						await this.delete(server, message);
-						await this.bot.deleteMessage(post.channel_id, post.message_id);
+						await post.message.delete();
 					} catch(e) {
 						return rej(e.message || e);
 					}
 				}
 			} else { //probably not a react post, or not from us; bound post instead
+				var channel = await this.bot.channels.fetch(post.channel_id);
+				var msg = await channel.messages.fetch(post.message_id);
+
 				if(!data.emoji) data.emoji = post.roles.map(r => r.emoji);
-				console.log(data.emoji);
-				await this.bot.removeMessageReactions(post.channel_id, post.message_id);
-				for(var emoji of data.emoji) await this.bot.addMessageReaction(post.channel_id, post.message_id, emoji);
+				await msg.reactions.removeAll();
+				for(var emoji of data.emoji) await msg.react(emoji);
 			}
 			
 			res(post);
@@ -345,35 +340,34 @@ class ReactPostStore extends Collection {
 		})
 	}
 
-	async handleReactions(msg, emoji, user) {
+	async handleReactions(react, user) {
 		return new Promise(async (res, rej) => {
-			if(this.bot.user.id == user) return;
+			if(this.bot.user.id == user.id) return;
+			if(react.partial) react = await react.fetch();
+			var msg = await react.message.fetch();
+
 			var post = await this.get(msg.channel.guild.id, msg.id);
 			if(!post) return;
-			if(emoji.id) emoji.name = `:${emoji.name}:${emoji.id}`;
-			var role = post.roles.find(r => [emoji.name, `a${emoji.name}`].includes(r.emoji));
+			if(react.emoji.id) react.emoji.name = `:${react.emoji.name}:${react.emoji.id}`;
+			var role = post.roles.find(r => [react.emoji.name, `a${react.emoji.name}`].includes(r.emoji));
 			if(!role) return;
-			var roles = post.roles.map(r => msg.channel.guild.roles.find(x => x.id == r.role_id)).filter(x => x && x.id != role.role_id);
-			role = msg.channel.guild.roles.find(r => r.id == role.role_id);
+			// var roles = post.roles.map(r => msg.channel.guild.roles.find(x => x.id == r.role_id)).filter(x => x && x.id != role.role_id);
+			role = await msg.channel.guild.roles.fetch(role.role_id);
 			if(!role) return;
-			var member = msg.channel.guild.members.find(m => m.id == user);
+			var member = await msg.channel.guild.members.fetch(user.id);
 			if(!member) return;
 
 			if(post.category) var category = await this.bot.stores.reactCategories.get(msg.channel.guild.id, post.category);
 
 			try {
-				this.bot.removeMessageReaction(msg.channel.id, msg.id, emoji.name.replace(/^:/,""), user);
-				if(post.required && !member.roles.includes(post.required)) return;
-				if(member.roles.includes(role.id)) msg.channel.guild.removeMemberRole(user, role.id);
-				else msg.channel.guild.addMemberRole(user, role.id);
-				if(category && category.single) category.roles.forEach(r => { if(member.roles.includes(r.role_id)) msg.channel.guild.removeMemberRole(user, r.role_id)})
+				react.users.remove(user.id);
+				if(post.required && !member.roles.cache.has(post.required)) return;
+				if(member.roles.cache.has(role.id)) await member.roles.remove(role.id);
+				else await member.roles.add(role.id);
+				if(category?.single) category.roles.forEach(r => { if(member.roles.cache.has(r.role_id) && r.role_id != role.id) member.roles.remove(r.role_id)})
 			} catch(e) {
 				console.log(e);
-				var ch = await this.bot.getDMChannel(user);
-				if(!ch) rej(e.message); //can't deliver error? reject
-				if(e.stack.includes("addGuildMemberRole") || e.stack.includes("removeGuildMemberRole")) ch.createMessage(`Couldn't manage role **${rl.name}** in ${msg.channel.guild.name}. Please let a mod know that something went wrong`);
-				else ch.createMessage(`Couldn't remove your reaction in ${msg.channel.guild.name}. Please let a mod know something went wrong`);
-				res(); //successfully delivered error, so we can just resolve
+				return await user.send(`mrr! error:\n${e.message}\nlet a mod know something went wrong.`);
 			}
 
 			res();

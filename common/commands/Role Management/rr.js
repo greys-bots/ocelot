@@ -1,20 +1,21 @@
 module.exports = {
 	help: ()=> "Sets, views, or edits reaction roles for the server",
-	usage: ()=> [" - Views available reaction role configs",
-				 " add [role] [emoji] (new line) <description> - Creates a new reaction role config, description optional (NOTE: to allow multi-word role names, all other arguments must be separated by a new line)",
-				 " delete [role] - Removes an existing reaction role config",
-				 " emoji [role] [newemoji] - Changes the emoji for an existing reaction role",
-				 " description [role] (new line) [new description] - Changes the description for an existing reaction role (NOTE: description must be on a new line)"
-				],
+	usage: ()=> [
+		" - Views available reaction role configs",
+		" add [role] [emoji] (new line) <description> - Creates a new reaction role config, description optional (NOTE: to allow multi-word role names, all other arguments must be separated by a new line)",
+		" delete [role] - Removes an existing reaction role config",
+		" emoji [role] [newemoji] - Changes the emoji for an existing reaction role",
+		" description [role] (new line) [new description] - Changes the description for an existing reaction role (NOTE: description must be on a new line)"
+	],
 	execute: async (bot, msg, args) => {
 		var roles = await bot.stores.reactRoles.getAll(msg.guild.id);
-		if(!roles || !roles.length) return 'No reaction roles available';
+		if(!roles || !roles.length) return 'mrr! no reaction roles registered.';
 
 		var embeds = await bot.utils.genEmbeds(bot, roles, async dat => {
 			return {name: `${dat.raw.name} (${dat.emoji.includes(":") ? `<${dat.emoji}>` : dat.emoji})`, value: dat.description || "*(no description provided)*"}
 		}, {
-			title: "Server Reaction Roles",
-			description: "All available roles for the server",
+			title: "react roles",
+			description: "all available roles for the server",
 		}, 10);
 		
 		return embeds;
@@ -31,18 +32,18 @@ module.exports.subcommands.add = {
 	execute: async (bot, msg, args)=> {
 		var nargs = args.join(" ").split("\n");
 		var arg1 = nargs[0].replace(/\s+$/,"").split(" ");
-		var role = msg.guild.roles.find(r => r.id == arg1.slice(0, arg1.length-1).join(" ").replace(/[<@&>]/g, "") || r.name.toLowerCase() == arg1.slice(0, arg1.length-1).join(" ").toLowerCase());
-		if(!role) return "Role not found";
+		var role = msg.guild.roles.cache.find(r => [r.id, r.name.toLowerCase()].includes(arg1.slice(0, arg1.length-1).join(" ").replace(/[<@&>]/g, "").toLowerCase()));
+		if(!role) return "mrr! role not found.";
 		var emoji = arg1.slice(-1)[0].replace(/[<>\s]/g,"");
 		var description = nargs.slice(1).join("\n");
 
 		try {
 			await bot.stores.reactRoles.create(msg.guild.id, role.id, {emoji, description});
 		} catch(e) {
-			return "ERR: "+e;
+			return "mrr! error:\n"+e;
 		}
 
-		return "React role created!";
+		return "*prrr* react role created~";
 	},
 	alias: ['create', 'new'],
 	permissions: ["MANAGE_ROLES"],
@@ -53,16 +54,22 @@ module.exports.subcommands.remove = {
 	help: ()=> "Removes a reaction role config",
 	usage: ()=> [" [role] - Removes config for the role (NOTE: roles that are deleted automatically have their config removed when posting or listing configs"],
 	execute: async (bot, msg, args)=> {
-		var role = msg.guild.roles.find(r => r.id == args.join(" ").replace(/[<@&>]/g, "") || r.name.toLowerCase() == args.join(" ").toLowerCase());
-		if(!role) return "Role not found";
+		var role = msg.guild.roles.cache.find(r => [r.id, r.name.toLowerCase()].includes(args.join(" ").replace(/[<@&>]/g, "").toLowerCase()));
+		if(!role) return "mrr! role not found.";
 		
 		try {
+			var rr = await bot.stores.reactRoles.get(msg.guild.id, role.id);
+			if(!rr) return "mrr! that isn't a react role.";
 			await bot.stores.reactRoles.delete(msg.guild.id, role.id);
+			var categories = await bot.stores.reactCategories.getByRole(msg.guild.id, rr.id);
+			if(categories?.[0]) {
+				for(var c of categories) await bot.stores.reactCategories.get(c.server_id, c.hid);
+			}
 		} catch(e) {
-			return "ERR: "+e;
+			return "mrr! error:\n"+e;
 		}
 
-		return "React role deleted!";
+		return "*prrr* react role deleted~";
 	},
 	alias: ['delete'],
 	permissions: ["MANAGE_ROLES"],
@@ -73,25 +80,26 @@ module.exports.subcommands.bind = {
 	help: ()=> "Binds a reaction role to a certain message.",
 	usage: ()=> [" [role name] [channel] [messageID] - Binds a role to the message"],
 	execute: async (bot, msg, args) => {
-		if(!args[2]) return "This command requires at least 3 arguments";
+		if(!args[2]) return "mrr! i need three arguments for this.";
 		var rl = args.slice(0, args.length - 2).join(" ").replace(/[<@&>]/g,"").toLowerCase();
-		var role = msg.guild.roles.find(r => r.id == rl || r.name.toLowerCase() == rl);
-		if(!role) return "Role not found";
+		var role = msg.guild.roles.cache.find(r => [r.id, r.name.toLowerCase()].includes(rl));
+		if(!role) return "mrr! role not found.";
 		role = await bot.stores.reactRoles.get(msg.guild.id, role.id);
-		if(!role) return "Reaction role not found";
+		if(!role) return "mrr! react role not found.";
 
-		var channel = msg.guild.channels.find(ch => ch.id == args[args.length - 2].replace(/[<#>]/g,"") || ch.name == args[args.length - 2].toLowerCase());
-		if(!channel) return "Channel not found";
-		var message = await bot.getMessage(channel.id, args[args.length-1]);
-		if(!message) return "Invalid message";
+		var channel = msg.guild.channels.cache.find(ch => [ch.id, ch.name].includes(args[args.length - 2].replace(/[<#>]/g,"").toLowerCase()));
+		if(!channel) return "mrr! channel not found.";
+		channel = await channel.fetch();
+		var message = await channel.messages.fetch(args[args.length-1]);
+		if(!message) return "mrr! invalid message.";
 
 		var post = await bot.stores.reactPosts.get(message.guild.id, message.id);
 		try {
 			if(post) {
 				if(post.roles.find(r => r.role_id == role.role_id)) {
-					return "That role is already bound to that message";
+					return "mrr! that role is already bound to that message.";
 				} else if(post.roles.find(r => r.emoji == role.emoji)) {
-					return "A role with that emoji is already bound to that message";
+					return "mrr! role with that emoji is already bound to that message.";
 				} else {
 					post.raw_roles.push(role.id);
 					await bot.stores.reactPosts.update(msg.guild.id, post.message_id, {roles: post.raw_roles});
@@ -100,12 +108,12 @@ module.exports.subcommands.bind = {
 				await bot.stores.reactPosts.create(msg.guild.id, message.channel.id, message.id, {roles: [role.id], page: 0});
 			}
 
-			await message.addReaction(role.emoji.replace(/^\:/, ""));
+			await message.react(role.emoji.replace(/^\:/, ""));
 		} catch(e) {
-			return "ERR: "+e;
+			return "mrr! error:\n"+e;
 		}
 
-		return "React role bound!";
+		return "*prrr* react role bound~";
 	},
 	permissions: ["MANAGE_ROLES"],
 	guildOnly: true
@@ -115,17 +123,18 @@ module.exports.subcommands.unbind = {
 	help: ()=> "Uninds a reaction role from a certain message",
 	usage: ()=> [" [role name] [channel] [messageID] - Unbinds a role from the message"],
 	execute: async (bot, msg, args) => {
-		if(!args[2]) return "This command requires at least 3 arguments";
+		if(!args[2]) return "mrr! i need three arguments for this.";
 		var rl = args.slice(0, args.length - 2).join(" ").replace(/[<@&>]/g,"").toLowerCase();
-		var role = msg.guild.roles.find(r => r.id == rl || r.name.toLowerCase() == rl);
-		if(!role) return "Role not found";
+		var role = msg.guild.roles.cache.find(r => [r.id, r.name.toLowerCase()].includes(rl));
+		if(!role) return "mrr! role not found.";
 		role = await bot.stores.reactRoles.get(msg.guild.id, role.id);
-		if(!role) return "Reaction role not found";
+		if(!role) return "mrr! react role not found.";
 
-		var channel = msg.guild.channels.find(ch => ch.id == args[args.length - 2].replace(/[<#>]/g,"") || ch.name == args[args.length - 2].toLowerCase());
-		if(!channel) return "Channel not found";
-		var message = await bot.getMessage(channel.id, args[args.length-1]);
-		if(!message) return "Invalid message";
+		var channel = msg.guild.channels.cache.find(ch => [ch.id, ch.name].includes(args[args.length - 2].replace(/[<#>]/g,"").toLowerCase()));
+		if(!channel) return "mrr! channel not found.";
+		channel = await channel.fetch();
+		var message = await channel.messages.fetch(args[args.length-1]);
+		if(!message) return "mrr! invalid message.";
 
 		var post = await bot.stores.reactPosts.get(message.guild.id, message.id);
 		try {
@@ -135,18 +144,19 @@ module.exports.subcommands.unbind = {
 					await bot.stores.reactPosts.update(msg.guild.id, post.message_id, {roles: post.raw_roles});
 					
 				} else {
-					return "That role isn't bound to that message";
+					return "mrr! that role isn't bound to that message.";
 				}
 			} else {
-				return "Nothing is bound to that post";
+				return "mrr! nothing bound to that message.";
 			}
 
-			await message.removeReaction(role.emoji.replace(/^\:/, ""));
+			var emoji = role.emoji.includes(":") ? role.emoji.match(/:(\d+)/)[1] : role.emoji;
+			await message.reactions.cache.find(r => [r.emoji.id, r.emoji.name].includes(emoji))?.remove();
 		} catch(e) {
-			return "ERR: "+e;
+			return "mrr! error:\n"+e;
 		}
 
-		return "React role unbound!";
+		return "*prrr* react role unbound~";
 	},
 	permissions: ["MANAGE_ROLES"],
 	guildOnly: true
@@ -157,21 +167,20 @@ module.exports.subcommands.emoji = {
 	usage: ()=> " [role] [emoji] - Changes emoji for the given role",
 	execute: async (bot, msg, args)=> {
 		var rl = args.slice(0, args.length - 1).join(" ").replace(/[<@&>]/g,"").toLowerCase();
-		var role = msg.guild.roles.find(r => r.id == rl || r.name.toLowerCase() == rl);
-		if(!role) return "Role not found";
+		var role = msg.guild.roles.cache.find(r => [r.id, r.name.toLowerCase()].includes(rl));
+		if(!role) return "mrr! role not found.";
 		role = await bot.stores.reactRoles.get(msg.guild.id, role.id);
-		if(!role) return "React role not found";
+		if(!role) return "mrr! react role not found.";
 
 		var emoji = args[args.length - 1].replace(/[<>]/g,"");
 
 		try {
 			await bot.stores.reactRoles.update(msg.guild.id, role.role_id, {emoji});
-			console.log("updated");
 		} catch(e) {
 			return "ERR: "+e
 		}
 
-		return "Emoji changed!";
+		return "*prrr* emoji changed~";
 	},
 	permissions: ["MANAGE_ROLES"],
 	guildOnly: true
@@ -183,20 +192,20 @@ module.exports.subcommands.description = {
 	execute: async (bot, msg, args)=> {
 		var nargs = args.join(" ").split("\n");
 		var rl = nargs[0].replace(/[<@&>]/g,"").toLowerCase();
-		var role = msg.guild.roles.find(r => r.id == rl || r.name.toLowerCase() == rl);
-		if(!role) return "Role not found";
+		var role = msg.guild.roles.cache.find(r => [r.id, r.name.toLowerCase()].includes(rl));
+		if(!role) return "mrr! role not found.";
 		role = await bot.stores.reactRoles.get(msg.guild.id, role.id);
-		if(!role) return "React role not found";
+		if(!role) return "mrr! react role not found.";
 
 		var description = nargs.slice(1).join("\n");
 
 		try {
 			await bot.stores.reactRoles.update(msg.guild.id, role.role_id, {description});
 		} catch(e) {
-			return "ERR: "+e
+			return "mrr! error:\n"+e
 		}
 
-		return "Description changed!";
+		return "*prrr* description changed~";
 	},
 	alias: ["describe", "desc"],
 	permissions: ["MANAGE_ROLES"],

@@ -8,7 +8,7 @@ const WELCOMES = [
 module.exports = async (msg, bot)=>{
 	if(msg.author.bot) return;
 	var config = await bot.stores.configs.get(msg.guild?.id);
-	var prefix = new Regexp(`^${bot.prefix}${config?.prefix ? '|'+config.prefix : ''}`, 'i');
+	var prefix = new RegExp(`^${bot.prefix}${config?.prefix ? '|'+config.prefix : ''}`, 'i');
 	if(!msg.content.toLowerCase().match(prefix)) {
 		var thanks = msg.content.match(/^(thanks? ?(you)?|ty),? ?oc(elot)?/i);
 		if(thanks) return await msg.channel.send(WELCOMES[Math.floor(Math.random() * WELCOMES.length)]);
@@ -50,10 +50,10 @@ module.exports = async (msg, bot)=>{
 	try {
 		var result = await command.execute(bot, msg, nargs, config);
 	} catch(e) {
-		console.log(e.stack);
-		log.push(`Error: ${e.stack}`);
+		console.log(e);
+		log.push(`Error: ${e}`);
 		log.push(`--------------------`);
-		msg.channel.send('mrr! error!\n'+e.message);
+		msg.channel.send('mrr! error:\n'+e.message);
 	}
 	console.log(log.join('\r\n'));
 	bot.writeLog(log.join('\r\n'));

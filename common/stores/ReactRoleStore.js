@@ -8,6 +8,18 @@ class ReactRoleStore extends Collection {
 		this.bot = bot;
 	};
 
+	async init() {
+		this.bot.on('roleDelete', async role => {
+			var rr = await this.getRaw(role.guild.id, role.id);
+			if(!rr) return;
+			await this.delete(role.guild.id, role.id);
+			var categories = await this.bot.stores.reactCategories.getByRole(role.guild.id, rr.id);
+			if(categories?.[0]) {
+				for(var c of categories) await this.bot.stores.reactCategories.get(c.server_id, c.hid); //auto-updates
+			}
+		})
+	}
+
 	async create(server, role, data = {}) {
 		return new Promise(async (res, rej) => {
 			try {
@@ -46,13 +58,8 @@ class ReactRoleStore extends Collection {
 		})
 	}
 
-	async get(server, role, forceUpdate = false) {
+	async get(server, role) {
 		return new Promise(async (res, rej) => {
-			if(!forceUpdate) {
-				var rr = super.get(`${server}-${role}`);
-				if(rr) return res(rr);
-			}
-
 			try {
 				var data = await this.db.query(`SELECT * FROM reactroles WHERE server_id = $1 AND role_id = $2`,[server, role]);
 			} catch(e) {
@@ -62,17 +69,31 @@ class ReactRoleStore extends Collection {
 			
 			if(data.rows && data.rows[0]) {
 				try {
-					var guild = await this.bot.getRESTGuild(server);
+					var guild = await this.bot.guilds.fetch(server);
 				} catch(e) {
 					console.log(e);
 					return rej(e.message);
 				}
-				data.rows[0].raw = guild.roles.find(r => r.id == data.rows[0].role_id);
+				data.rows[0].raw = await guild.roles.cache.find(r => r.id == data.rows[0].role_id);
 				if(!data.rows[0].raw) {
 					await this.delete(server, data.rows[0].role_id);
 					return res(undefined);
 				}
-				this.set(`${server}-${role}`, data.rows[0])
+				res(data.rows[0])
+			} else res(undefined);
+		})
+	}
+
+	async getRaw(server, role) {
+		return new Promise(async (res, rej) => {
+			try {
+				var data = await this.db.query(`SELECT * FROM reactroles WHERE server_id = $1 AND role_id = $2`,[server, role]);
+			} catch(e) {
+				console.log(e);
+				return rej(e.message);
+			}
+			
+			if(data.rows && data.rows[0]) {
 				res(data.rows[0])
 			} else res(undefined);
 		})
@@ -89,12 +110,12 @@ class ReactRoleStore extends Collection {
 			
 			if(data.rows && data.rows[0]) {
 				try {
-					var guild = await this.bot.getRESTGuild(server);
+					var guild = await this.bot.guilds.fetch(server);
 				} catch(e) {
 					console.log(e);
 					return rej(e.message);
 				}
-				data.rows[0].raw = guild.roles.find(r => r.id == data.rows[0].role_id);
+				data.rows[0].raw = await guild.roles.fetch(data.rows[0].role_id);
 				if(!data.rows[0].raw) {
 					await this.delete(server, data.rows[0].role_id);
 					return res(undefined);
@@ -115,12 +136,12 @@ class ReactRoleStore extends Collection {
 			
 			if(data.rows && data.rows[0]) {
 				try {
-					var guild = await this.bot.getRESTGuild(server);
+					var guild = await this.bot.guilds.fetch(server);
 				} catch(e) {
 					console.log(e);
 					return rej(e.message);
 				}
-				data.rows[0].raw = guild.roles.find(r => r.id == data.rows[0].role_id);
+				data.rows[0].raw = await guild.roles.fetch(data.rows[0].role_id);
 				if(!data.rows[0].raw) {
 					await this.delete(server, data.rows[0].role_id);
 					return res(undefined);
@@ -141,13 +162,13 @@ class ReactRoleStore extends Collection {
 
 			if(data.rows && data.rows[0]) {
 				try {
-					var guild = await this.bot.getRESTGuild(server);
+					var guild = await this.bot.guilds.fetch(server);
 				} catch(e) {
 					console.log(e);
 					return rej(e.message);
 				}
 				for(var i = 0; i < data.rows.length; i++) {
-					data.rows[i].raw = guild.roles.find(r => r.id == data.rows[i].role_id);
+					data.rows[i].raw = await guild.roles.fetch(data.rows[i].role_id);
 					if(!data.rows[i].raw) {
 						await this.delete(server, data.rows[i].role_id);
 						data.rows[i] = undefined;
@@ -172,14 +193,14 @@ class ReactRoleStore extends Collection {
 			
 			if(data.rows && data.rows[0]) {
 				try {
-					var guild = this.bot.guilds.find(g => g.id == server);
+					var guild = await this.bot.guilds.fetch(server);
 				} catch(e) {
 					console.log(e);
 					return rej(e.message);
 				}
 				if(!guild) return rej("Guild not found");
 				for(var i = 0; i < data.rows.length; i++) {
-					data.rows[i].raw = guild.roles.find(r => r.id == data.rows[i].role_id);
+					data.rows[i].raw = await guild.roles.fetch(data.rows[i].role_id);
 					if(!data.rows[i].raw) {
 						await this.delete(server, data.rows[i].role_id);
 						data.rows[i] = undefined;

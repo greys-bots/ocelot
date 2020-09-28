@@ -1,9 +1,7 @@
 var fs = require('fs');
-var dblite = require('dblite');
 var {Pool} = require('pg');
 
 module.exports = async (bot) => {
-	// db = dblite("./data.sqlite","-header");
 	const db = new Pool();
 
 	await db.query(`

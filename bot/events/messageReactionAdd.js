@@ -15,7 +15,7 @@ module.exports = async (reaction, user, bot)=> {
 		} catch(e) {
 			console.log(e);
 			bot.writeLog(e);
-			msg.channel.send("mrr! error! "+e.message);
+			msg.channel.send("mrr! error:\n"+e.message);
 		}
 	}
 }

@@ -75,4 +75,17 @@ const registerSubcommands = function(command, module, name) {
 	return command;
 }
 
-module.exports = {recursivelyReadDirectory, loadCommands, registerSubcommands}
+module.exports = {
+	recursivelyReadDirectory,
+	loadCommands,
+	registerSubcommands,
+	genCode: (table, num = 4) =>{
+		var codestring="";
+		var codenum=0;
+		while (codenum<num){
+			codestring=codestring+table[Math.floor(Math.random() * (table.length))];
+			codenum=codenum+1;
+		}
+		return codestring;
+	}
+}

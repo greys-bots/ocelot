@@ -56,13 +56,8 @@ class ReactCategoryStore extends Collection {
 		})
 	}
 
-	async get(server, hid, forceUpdate = false) {
+	async get(server, hid) {
 		return new Promise(async (res, rej) => {
-			if(!forceUpdate) {
-				var category = super.get(`${server}-${hid}`);
-				if(category) return res(category);
-			}
-
 			try {
 				var data = await this.db.query(`SELECT * FROM reactcategories WHERE server_id = $1 AND hid = $2`,[server, hid]);
 			} catch(e) {
@@ -76,9 +71,9 @@ class ReactCategoryStore extends Collection {
 				category.posts = (await this.bot.stores.reactPosts.getByRowIDs(server, category.posts)) || [];
 				category.raw_roles = category.roles;
 				category.roles = await this.bot.stores.reactRoles.getByRowIDs(server, category.roles);
-				if(category.raw_posts.length < category.posts.length || category.raw_roles.length < category.roles.length) {
-					category.raw_posts = category.raw_posts.filter(x => category.posts.find(p => p.id == x));
-					category.raw_roles = category.raw_roles.filter(x => category.roles.filter(r => r.id == x));
+				if(category.raw_posts.length > category.posts.length || category.raw_roles.length > category.roles.length) {
+					category.raw_posts = category.posts.map(p => p.id);
+					category.raw_roles = category.roles.map(r => r.id);
 					await this.update(server, hid, {posts: category.raw_posts, roles: category.raw_roles});
 				}
 				this.set(`${server}-${hid}`, category);
@@ -87,7 +82,7 @@ class ReactCategoryStore extends Collection {
 		})
 	}
 
-	async getByRole(server, role, forceUpdate = false) {
+	async getByRole(server, role) {
 		return new Promise(async (res, rej) => {
 			try {
 				var categories = await this.getAll(server);
@@ -95,7 +90,7 @@ class ReactCategoryStore extends Collection {
 				return rej(e);
 			}
 
-			categories = categories.filter(c => c.roles.find(r => r.id == role) || c.raw_roles.includes(role));
+			categories = categories.filter(c => c.roles.find(r => r.role_id == role) || c.raw_roles.find(r => r == role));
 			if(categories[0]) res(categories);
 			else res(undefined);
 		})
@@ -131,18 +126,15 @@ class ReactCategoryStore extends Collection {
 			}
 			
 			var category = await this.get(server, hid, true);
-			if(!category) return rej('Category not found');
+			if(!category) return rej('mrr! category not found.');
 
 			var embeds = await this.bot.utils.genReactPosts(this.bot, category.roles, {
 				title: category.name,
 				description: category.description,
 				footer: {
-					text: `Category ID: ${category.hid}${category.single ? " | You may only have one role from this category at a time" : ""}`
+					text: `category id: ${category.hid}${category.single ? " | you can only have one role from this category at a time." : ""}`
 				}
 			});
-
-			console.log(embeds);
-			console.log("---")
 
 			if(updatePosts) {
 				for(var post of category.posts) {

@@ -11,14 +11,15 @@ const bot = new Discord.Client({
 	messageSweepInterval: 5 * 60
 });
 
+bot.chars  = process.env.CHARS;
 bot.prefix = process.env.PREFIX;
 bot.invite = process.env.INVITE;
 
 bot.status = 0;
 bot.guildCount = 0;
 bot.statuses = [
-	() => `oc!h | in ${bot.guilds.cache.size} guilds!`,
-	() => `oc!h | serving ${bot.users.cache.size} users!`
+	() => `oc!h | in ${bot.guilds.cache.size} guilds~`,
+	() => `oc!h | serving ${bot.users.cache.size} users~`
 ];
 
 bot.updateStatus = async function(){
@@ -66,17 +67,17 @@ bot.writeLog = async (log) => {
 	if(!fs.existsSync('./logs')) fs.mkdirSync('./logs');
 	if(!fs.existsSync(`./logs/${ndt}.log`)){
 		fs.writeFile(`./logs/${ndt}.log`,log+"\r\n",(err)=>{
-			if(err) console.log(`Error while attempting to write log ${ndt}\n`+err.stack);
+			if(err) console.log(`couldn't write log ${ndt}:\n`+err.stack);
 		});
 	} else {
 		fs.appendFile(`./logs/${ndt}.log`,log+"\r\n",(err)=>{
-			if(err) console.log(`Error while attempting to apend to log ${ndt}\n`+err);
+			if(err) console.log(`couldn't append log ${ndt}:\n`+err);
 		});
 	}
 }
 
 bot.on("ready", async ()=> {
-	console.log('Ender ready!');
+	console.log('prrr~ ocelot ready.');
 	bot.updateStatus();
 })
 
