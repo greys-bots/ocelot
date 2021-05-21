@@ -1,6 +1,6 @@
 const {Collection} = require("discord.js");
 
-class ReactRoleStore extends Collection {
+class SelfRoleStore extends Collection {
 	constructor(bot, db) {
 		super();
 
@@ -13,9 +13,9 @@ class ReactRoleStore extends Collection {
 			var rr = await this.getRaw(role.guild.id, role.id);
 			if(!rr) return;
 			await this.delete(role.guild.id, role.id);
-			var categories = await this.bot.stores.reactCategories.getByRole(role.guild.id, rr.id);
-			if(categories?.[0]) {
-				for(var c of categories) await this.bot.stores.reactCategories.get(c.server_id, c.hid); //auto-updates
+			var bundles = await this.bot.stores.bundles.getByRole(role.guild.id, rr.id);
+			if(bundles?.[0]) {
+				for(var c of bundles) await this.bot.stores.bundles.get(c.server_id, c.hid); //auto-updates
 			}
 		})
 	}
@@ -23,13 +23,13 @@ class ReactRoleStore extends Collection {
 	async create(server, role, data = {}) {
 		return new Promise(async (res, rej) => {
 			try {
-				this.db.query(`INSERT INTO reactroles (
+				this.db.query(`INSERT INTO selfroles (
 					server_id,
 			    	role_id,
-			    	emoji,
-			    	description
+			    	description,
+			    	assignable
 				) VALUES ($1,$2,$3,$4)`,
-				[server, role, data.emoji || "", data.description || ""])
+				[server, role, data.description || "", data.assignable || false])
 			} catch(e) {
 				console.log(e);
 		 		return rej(e.message);
@@ -42,13 +42,13 @@ class ReactRoleStore extends Collection {
 	async index(server, role, data = {}) {
 		return new Promise(async (res, rej) => {
 			try {
-				this.db.query(`INSERT INTO reactroles (
+				this.db.query(`INSERT INTO selfroles (
 					server_id,
 			    	role_id,
-			    	emoji,
-			    	description
+			    	description,
+			    	assignable
 				) VALUES ($1,$2,$3,$4)`,
-				[server, role, data.emoji || "", data.description || ""])
+				[server, role, data.description || "", data.assignable || false])
 			} catch(e) {
 				console.log(e);
 		 		return rej(e.message);
@@ -61,7 +61,7 @@ class ReactRoleStore extends Collection {
 	async get(server, role) {
 		return new Promise(async (res, rej) => {
 			try {
-				var data = await this.db.query(`SELECT * FROM reactroles WHERE server_id = $1 AND role_id = $2`,[server, role]);
+				var data = await this.db.query(`SELECT * FROM selfroles WHERE server_id = $1 AND role_id = $2`,[server, role]);
 			} catch(e) {
 				console.log(e);
 				return rej(e.message);
@@ -87,39 +87,13 @@ class ReactRoleStore extends Collection {
 	async getRaw(server, role) {
 		return new Promise(async (res, rej) => {
 			try {
-				var data = await this.db.query(`SELECT * FROM reactroles WHERE server_id = $1 AND role_id = $2`,[server, role]);
+				var data = await this.db.query(`SELECT * FROM selfroles WHERE server_id = $1 AND role_id = $2`,[server, role]);
 			} catch(e) {
 				console.log(e);
 				return rej(e.message);
 			}
 			
 			if(data.rows && data.rows[0]) {
-				res(data.rows[0])
-			} else res(undefined);
-		})
-	}
-
-	async getByReaction(server, emoji) {
-		return new Promise(async (res, rej) => {
-			try {
-				var data = await this.db.query(`SELECT * FROM reactroles WHERE server_id = $1 AND emoji = $2`,[server, emoji]);
-			} catch(e) {
-				console.log(e);
-				return rej(e.message);
-			}
-			
-			if(data.rows && data.rows[0]) {
-				try {
-					var guild = await this.bot.guilds.fetch(server);
-				} catch(e) {
-					console.log(e);
-					return rej(e.message);
-				}
-				data.rows[0].raw = await guild.roles.fetch(data.rows[0].role_id);
-				if(!data.rows[0].raw) {
-					await this.delete(server, data.rows[0].role_id);
-					return res(undefined);
-				}
 				res(data.rows[0])
 			} else res(undefined);
 		})
@@ -128,7 +102,7 @@ class ReactRoleStore extends Collection {
 	async getByRowID(server, id) {
 		return new Promise(async (res, rej) => {
 			try {
-				var data = await this.db.query(`SELECT * FROM reactroles WHERE server_id = $1 AND id = $2`,[server, id]);
+				var data = await this.db.query(`SELECT * FROM selfroles WHERE server_id = $1 AND id = $2`,[server, id]);
 			} catch(e) {
 				console.log(e);
 				return rej(e.message);
@@ -154,7 +128,7 @@ class ReactRoleStore extends Collection {
 	async getAll(server) {
 		return new Promise(async (res, rej) => {
 			try {
-				var data = await this.db.query(`SELECT * FROM reactroles WHERE server_id = $1`,[server]);
+				var data = await this.db.query(`SELECT * FROM selfroles WHERE server_id = $1`,[server]);
 			} catch(e) {
 				console.log(e);
 				return rej(e.message);
@@ -185,7 +159,7 @@ class ReactRoleStore extends Collection {
 			if(ids.length == 0) return res([]);
 
 			try {
-				var data = await this.db.query(`SELECT * FROM reactroles WHERE server_id = $1 AND id = ANY($2)`,[server, ids]);
+				var data = await this.db.query(`SELECT * FROM selfroles WHERE server_id = $1 AND id = ANY($2)`,[server, ids]);
 			} catch(e) {
 				console.log(e);
 				return rej(e.message);
@@ -215,25 +189,21 @@ class ReactRoleStore extends Collection {
 	async update(server, role, data = {}) {
 		return new Promise(async (res, rej) => {
 			try {
-				await this.db.query(`UPDATE reactroles SET ${Object.keys(data).map((k, i) => k+"=$"+(i+3)).join(",")} WHERE server_id = $1 AND role_id = $2`,[server, role, ...Object.values(data)]);
-				var nrole = await this.get(server, role);
-				console.log(nrole);
-				var posts = await this.bot.stores.reactPosts.getByRole(server, nrole.id);
-				console.log(posts);
-				if(posts) for(var post of posts) this.bot.stores.reactPosts.update(server, post.message_id, {roles: post.raw_roles});
+				await this.db.query(`UPDATE selfroles SET ${Object.keys(data).map((k, i) => k+"=$"+(i+3)).join(",")} WHERE server_id = $1 AND role_id = $2`,[server, role, ...Object.values(data)]);
+				var role = await this.get(server, role);
 			} catch(e) {
 				console.log(e);
 				return rej(e.message);
 			}
 
-			res();
+			res(role);
 		})
 	}
 
 	async delete(server, role) {
 		return new Promise(async (res, rej) => {
 			try {
-				await this.db.query(`DELETE FROM reactroles WHERE server_id = $1 AND role_id = $2`, [server, role]);
+				await this.db.query(`DELETE FROM selfroles WHERE server_id = $1 AND role_id = $2`, [server, role]);
 			} catch(e) {
 				console.log(e);
 				return rej(e.message);
@@ -248,7 +218,7 @@ class ReactRoleStore extends Collection {
 		return new Promise(async (res, rej) => {
 			try {
 				var roles = await this.getAll(server);
-				await this.db.query(`DELETE FROM reactroles WHERE server_id = $1 AND role_id = $2`, [server, role]);
+				await this.db.query(`DELETE FROM selfroles WHERE server_id = $1 AND role_id = $2`, [server, role]);
 				for(role of roles) super.delete(`${server}-${role.role_id}`);
 			} catch(e) {
 				console.log(e)
@@ -260,4 +230,4 @@ class ReactRoleStore extends Collection {
 	}
 }
 
-module.exports = (bot, db) => new ReactRoleStore(bot, db);
+module.exports = (bot, db) => new SelfRoleStore(bot, db);

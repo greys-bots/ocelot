@@ -1,5 +1,5 @@
 module.exports = {
-	help: ()=> "Sets, views, or edits reaction roles for the server",
+	help: ()=> "Manages reaction roles for the server",
 	usage: ()=> [
 		" - Views available reaction role configs",
 		" add [role] [emoji] (new line) <description> - Creates a new reaction role config, description optional (NOTE: to allow multi-word role names, all other arguments must be separated by a new line)",

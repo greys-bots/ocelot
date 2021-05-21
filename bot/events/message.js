@@ -8,8 +8,8 @@ const WELCOMES = [
 module.exports = async (msg, bot)=>{
 	if(msg.author.bot) return;
 	var config = await bot.stores.configs.get(msg.guild?.id);
-	var prefix = new RegExp(`^${bot.prefix}${config?.prefix ? '|'+config.prefix : ''}`, 'i');
-	if(!msg.content.toLowerCase().match(prefix)) {
+	var prefix = config?.prefix ? config.prefix : bot.prefix;
+	if(!msg.content.toLowerCase().startsWith(prefix)) {
 		var thanks = msg.content.match(/^(thanks? ?(you)?|ty),? ?oc(elot)?/i);
 		if(thanks) return await msg.channel.send(WELCOMES[Math.floor(Math.random() * WELCOMES.length)]);
 		return;

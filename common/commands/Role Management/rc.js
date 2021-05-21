@@ -1,5 +1,5 @@
 module.exports = {
-	help: ()=> "Creates categories for reaction roles",
+	help: ()=> "Manages reaction categories for the server",
 	usage: ()=> [
 		" - Lists available categories and their IDs",
 		" create [name] [description] - Creates new react role category",

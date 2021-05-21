@@ -1,9 +1,9 @@
 module.exports = {
-	help: ()=> "Display help embed.",
+	help: ()=> "Display help embed",
 	usage: ()=> [
-		" - Displays help for all commands.",
-		" [command] - Displays help for specfic command.",
-		" [command] [subcommand] - Displays help for a command's subcommand."
+		" - Displays help for all commands",
+		" [command] - Displays help for specfic command",
+		" [command] [subcommand] - Displays help for a command's subcommand"
 	],
 	execute: async (bot, msg, args) => {
 		if(!args[0]) {

@@ -11,6 +11,8 @@ module.exports = async (bot) => {
 	        prefix 			TEXT
 	    );
 
+	    -- React roles
+
 	    CREATE TABLE IF NOT EXISTS reactcategories (
 	    	id 				SERIAL PRIMARY KEY,
 	    	hid 			TEXT,
@@ -42,6 +44,26 @@ module.exports = async (bot) => {
 	    	single 			BOOLEAN,
 	    	required 		TEXT
 		);
+
+		-- Bundles
+
+		CREATE TABLE IF NOT EXISTS bundles (
+	    	id 				SERIAL PRIMARY KEY,
+	    	hid 			TEXT,
+	    	server_id		TEXT,
+	    	name 			TEXT,
+	    	description 	TEXT,
+	    	roles 			TEXT[],
+	    	assignable		BOOLEAN
+	    );
+
+		CREATE TABLE IF NOT EXISTS selfroles (
+	    	id 				SERIAL PRIMARY KEY,
+	    	server_id		TEXT,
+	    	role_id 		TEXT,
+	    	description 	TEXT,
+	    	assignable		BOOLEAN
+	    );
 
 		CREATE TABLE IF NOT EXISTS usages (
 			id 			SERIAL PRIMARY KEY,
