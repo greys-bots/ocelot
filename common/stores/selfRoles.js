@@ -190,13 +190,12 @@ class SelfRoleStore extends Collection {
 		return new Promise(async (res, rej) => {
 			try {
 				await this.db.query(`UPDATE selfroles SET ${Object.keys(data).map((k, i) => k+"=$"+(i+3)).join(",")} WHERE server_id = $1 AND role_id = $2`,[server, role, ...Object.values(data)]);
-				var role = await this.get(server, role);
 			} catch(e) {
 				console.log(e);
 				return rej(e.message);
 			}
 
-			res(role);
+			res(await this.get(server, role, true));
 		})
 	}
 

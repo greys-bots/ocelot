@@ -97,7 +97,7 @@ module.exports.subcommands.remove = {
 			var role = msg.guild.roles.cache.find(r => r.id == arg || r.name.toLowerCase() == arg.toLowerCase());
 			var user = bot.users.cache.find(u => u.id == arg);
 			if((role || user) && blacklist.includes(arg)) {
-				blacklist = blacklist.filter(x => ![role ? role.id : "", user ? user.id : ""].includes(x));
+				blacklist = blacklist.filter(x => ![role?.id, user?.id].includes(x));
 				removed.push(role || user);
 			} else invalid.push(arg);
 		}

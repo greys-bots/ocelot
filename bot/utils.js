@@ -134,7 +134,7 @@ module.exports = {
 						return res({confirmed: true, message});
 						break;
 					default:
-						return res({confirmed: false, message, msg: 'Action cancelled!'});
+						return res({confirmed: false, message, msg: 'mrr! action cancelled.'});
 						break;
 				}
 			}
@@ -239,5 +239,17 @@ module.exports = {
 			if(cmd.permissions) res(msg.member.permissions.has(cmd.permissions))
 			else res(true);
 		})
+	},
+
+	groupArgs: (args) => {
+		if(typeof args == "object") args = args.join(" ");
+		var nargs = [];
+		var tmp;
+		var regex = /[“”](.+?)[“”]|[‘’](.+?)[‘’]|"(.+?)"|'(.+?)'|(\S+)/gi;
+		while(tmp = regex.exec(args)) {
+			tmp.splice(1).forEach(m => { if(m) nargs.push(m); });
+		}
+
+		return nargs
 	}
 }

@@ -8,5 +8,7 @@ module.exports = {
 		" name [bundle id] [new name] - Changes a bundle's name",
 		" description [bundle id] [new description] - Changes a bundle's description",
 		" delete [bundle id] - Deletes a bundle. Will not delete the actual roles inside, nor the self roles associated"
-	]
+	],
+
+	group: true
 }

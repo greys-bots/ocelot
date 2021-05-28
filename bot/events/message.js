@@ -20,7 +20,7 @@ module.exports = async (msg, bot)=>{
 		`Message: ${msg.content}`,
 		`--------------------`
 	];
-	let args = msg.content.replace(prefix, "").split(" ");
+	let args= msg.content.replace(prefix, "").split(" ");
 	if(!args[0]) args.shift();
 	if(!args[0]) return msg.channel.send("*prrrrr* that's me~");
 
@@ -31,6 +31,7 @@ module.exports = async (msg, bot)=>{
 		bot.writeLog(log.join('\r\n'));
 		return await msg.channel.send("mrr! i need a real command.");
 	}
+	if(command.group) nargs = bot.utils.groupArgs(nargs);
 
 	if(!msg.guild && command.guildOnly) {
 		console.log("- Command is guild only -")
