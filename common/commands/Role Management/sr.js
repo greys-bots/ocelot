@@ -17,6 +17,7 @@ module.exports = {
 		" [role] - Get info on a role",
 		" modonly - Lists self roles that can only be assigned by mods",
 		" index [role id] [true | false] - Indexes a role and sets whether it can be self-assigned or should be mod-assign only",
+		" modonly [role id] [true | false] - Sets whether an existing role can be self-assigned or should be mod-assign only",
 		" add [roles] <@user @mentions> - Adds self roles. Mention users to add roles to them",
 		" remove [roles] <@user @mentions> - Removes self roles. Mention users to remove roles them",
 		" description [role] [description] - Sets a self-role's description",
@@ -57,14 +58,15 @@ module.exports = {
 }
 
 module.exports.subcommands.index = {
-	help: ()=> "Index a self a role",
+	help: ()=> "Index a self role",
 	usage: ()=> [
-		" [role id] [true | false] - Indexes a role, setting whether it can be self-assigned"
+		" [role] [true | false] <description>- Indexes a role, setting whether it can be self-assigned and optionally adding a description"
 	],
 	execute: async (bot, msg, args) => {
 		if(!args[1]) return "mrr! i need at least two arguments.";
-		var val = args.pop().toLowerCase();
-		var name = args.join(" ").toLowerCase().replace(/[<@&>]/g, "");
+		var name = args[0].toLowerCase().replace(/[<@&>]/g, "");
+		var val = args[1].toLowerCase();
+		var description = args.slice(2).join(" ");
 		if(!Object.keys(VALUES).find(x => x == val)) return "mrr! last argument invalid. i need a truthy or falsy value."
 		val = VALUES[val];
 		
@@ -77,11 +79,42 @@ module.exports.subcommands.index = {
 			return "mrr! error:\n" + e.message;
 		}
 
-		await bot.stores.selfRoles.create(msg.guild.id, role.id, {assignable: val});
+		await bot.stores.selfRoles.create(msg.guild.id, role.id, {assignable: val, description});
 
 		return "*prrr* self role indexed~"
 	},
 	alias: ['i'],
+	group: true
+}
+
+module.exports.subcommands.modonly = {
+	help: ()=> "Set a self role's assignability",
+	usage: ()=> [
+		" [role] [true | false] - Sets whether the role can be self-assigned or not"
+	],
+	execute: async (bot, msg, args) => {
+		if(!args[1]) return "mrr! i need at least two arguments.";
+		var name = args[0].toLowerCase().replace(/[<@&>]/g, "");
+		var val = args[1].toLowerCase();
+		if(!Object.keys(VALUES).find(x => x == val)) return "mrr! last argument invalid. i need a truthy or falsy value."
+		val = VALUES[val];
+		
+		var groles = await msg.guild.roles.fetch();
+		try {
+			var role = groles.cache.find(r => [r.name.toLowerCase(), r.id].includes(name));
+			if(!role) role = await msg.guild.roles.fetch(name);
+			if(!role) return "mrr! role not found.";
+		} catch(e) {
+			return "mrr! error:\n" + e.message;
+		}
+		var sr = await bot.stores.selfRoles.get(msg.guild.id, role.id);
+		if(!sr) return 'mrr! self role not indexed.';
+
+		await bot.stores.selfRoles.update(msg.guild.id, role.id, {assignable: val});
+
+		return "*prrr* self role updated~"
+	},
+	alias: ['mo', 'assignable'],
 	group: true
 }
 
@@ -91,6 +124,7 @@ module.exports.subcommands.add = {
 		' [roles] - Adds available roles to yourself',
 		' [roles] [@user @mention] - Adds roles to the given member(s)'
 	],
+	desc: () => "Note: Users MUST be mentioned!",
 	execute: async (bot, msg, args) => {
 		if(!args[0]) return "mrr! i need at least one argument.";
 		var sr = await bot.stores.selfRoles.getAll(msg.guild.id);
@@ -152,6 +186,7 @@ module.exports.subcommands.remove = {
 		' [roles] - Removes available roles from yourself',
 		' [roles] [@user @mention] - Removed roles from the given member(s)'
 	],
+	desc: () => "Note: Users MUST be mentioned!",
 	execute: async (bot, msg, args) => {
 		if(!args[0]) return "mrr! i need at least one argument.";
 		var sr = await bot.stores.selfRoles.getAll(msg.guild.id);
@@ -257,7 +292,31 @@ module.exports.subcommands.delete = {
 		" *|all - Deletes all self roles"
 	],
 	execute: async (bot, msg, args) => {
-		
+		if(!args[0]) return "mrr! i need at least one argument.";
+
+		if(['*', 'all'].includes(args[0].toLowerCase())) {
+			var sr = await bot.stores.selfRoles.getAll();
+			if(!sr || !sr.length) return 'mrr! nothing to delete.';
+
+			var message = await msg.channel.send('are you sure you want to delete **ALL** indexed self roles?');
+			['✅', '❌'].forEach(r => message.react(r));
+			var conf = await bot.utils.getConfirmation(bot, message, msg.author);
+
+			if(conf.msg) return conf.msg;
+
+			bot.stores.selfRoles.deleteAll(msg.guild.id);
+			return '*prrr* self roles deleted~';
+		}
+
+		var name = (args.length > 1 ? args.join(" ") : args[0]).toLowerCase();
+		var groles = await msg.guild.roles.fetch();
+		var role = groles.cache.find(r => [r.name.toLowerCase(), r.id].includes(name));
+		if(!role) return 'mrr! role not found.';
+		var sr = await bot.stores.selfRoles.get(msg.guild.id, role.id);
+		if(!sr) return 'mrr! self role not indexed.';
+
+		await bot.stores.selfRoles.delete(msg.guild.id, role.id);
+		return '*prrr* self role deleted~';
 	},
 	alias: ['del'],
 	group: true,

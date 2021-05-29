@@ -20,7 +20,7 @@ module.exports = async (msg, bot)=>{
 		`Message: ${msg.content}`,
 		`--------------------`
 	];
-	let args= msg.content.replace(prefix, "").split(" ");
+	let args = msg.content.replace(prefix, "").split(" ");
 	if(!args[0]) args.shift();
 	if(!args[0]) return msg.channel.send("*prrrrr* that's me~");
 
