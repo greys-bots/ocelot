@@ -8,8 +8,9 @@ class BundleStore extends Collection {
 		this.bot = bot;
 	};
 
-	async create(server, hid, data = {}) {
+	async create(server, data = {}) {
 		return new Promise(async (res, rej) => {
+			var hid = this.bot.utils.genCode();
 			try {
 				await this.db.query(`INSERT INTO bundles (
 					hid,
@@ -29,7 +30,7 @@ class BundleStore extends Collection {
 		})
 	}
 
-	async index(server, hid, data = {}) {
+	async index(server, data = {}) {
 		return new Promise(async (res, rej) => {
 			try {
 				await this.db.query(`INSERT INTO bundles (
@@ -40,7 +41,7 @@ class BundleStore extends Collection {
 					roles,
 					assignable
 				) VALUES ($1, $2, $3, $4, $5, $6)`,
-				[hid, server, data.name, data.description, data.roles || [], data.assignable || false]);
+				[data.hid, server, data.name, data.description, data.roles || [], data.assignable || false]);
 			} catch(e) {
 				console.log(e);
 		 		return rej(e.message);
@@ -62,12 +63,13 @@ class BundleStore extends Collection {
 			if(data.rows && data.rows[0]) {
 				var bundle = data.rows[0];
 				bundle.raw_roles = bundle.roles;
-				bundle.roles = await this.bot.stores.selfRoles.getByRowIDs(server, bundle.roles);
+				var guild = this.bot.guilds.resolve(server);
+				var groles = await guild.roles.fetch();
+				bundle.roles = bundle.roles.map(r => groles.cache.find(rl => r == rl.id)).filter(x => x);
 				if(bundle.raw_roles.length > bundle.roles.length) {
 					bundle.raw_roles = bundle.roles.map(r => r.id);
 					await this.update(server, hid, {roles: bundle.raw_roles});
 				}
-				this.set(`${server}-${hid}`, bundle);
 				res(bundle)
 			} else res(undefined);
 		})
@@ -96,9 +98,11 @@ class BundleStore extends Collection {
 				return rej(e.message);
 			}
 			if(data.rows && data.rows[0]) {
+				var guild = this.bot.guilds.resolve(server);
+				var groles = await guild.roles.fetch();
 				for(var i = 0; i < data.rows.length; i++) {
 					data.rows[i].raw_roles = data.rows[i].roles;
-					data.rows[i].roles = await this.bot.stores.selfRoles.getByRowIDs(server, data.rows[i].roles);
+					data.rows[i].roles = data.rows[i].roles.map(r => groles.cache.find(rl => rl.id == r)).filter(x => x);
 				}
 				res(data.rows)
 			} else res(undefined);

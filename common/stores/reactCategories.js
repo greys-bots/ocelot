@@ -67,15 +67,21 @@ class ReactCategoryStore extends Collection {
 			
 			if(data.rows && data.rows[0]) {
 				var category = data.rows[0];
+				console.log(category);
 				category.raw_posts = category.posts;
 				category.posts = (await this.bot.stores.reactPosts.getByRowIDs(server, category.posts)) || [];
-				category.raw_roles = category.roles;
+				category.raw_roles = category.roles.map(r => parseInt(r));
 				category.roles = await this.bot.stores.reactRoles.getByRowIDs(server, category.roles);
 				if(category.raw_posts.length > category.posts.length || category.raw_roles.length > category.roles.length) {
 					category.raw_posts = category.posts.map(p => p.id);
 					category.raw_roles = category.roles.map(r => r.id);
 					await this.update(server, hid, {posts: category.raw_posts, roles: category.raw_roles});
 				}
+				console.log(category.raw_roles);
+				category.roles = category.roles.sort((a, b) => {
+					console.log(a.id, b.id);
+					return category.raw_roles.indexOf(a.id) - category.raw_roles.indexOf(b.id)
+				})
 				this.set(`${server}-${hid}`, category);
 				res(category)
 			} else res(undefined);
@@ -108,8 +114,11 @@ class ReactCategoryStore extends Collection {
 				for(var i = 0; i < data.rows.length; i++) {
 					data.rows[i].raw_posts = data.rows[i].posts;
 					data.rows[i].posts = await this.bot.stores.reactPosts.getByRowIDs(server, data.rows[i].posts);
-					data.rows[i].raw_roles = data.rows[i].roles;
+					data.rows[i].raw_roles = data.rows[i].roles.map(r => parseInt(r));
 					data.rows[i].roles = await this.bot.stores.reactRoles.getByRowIDs(server, data.rows[i].roles);
+					data.rows[i].roles = data.rows[i].roles.sort((a, b) => {
+						return data.rows[i].raw_roles.indexOf(a.id) - data.rows[i].raw_roles.indexOf(b.id)
+					})
 				}
 				res(data.rows)
 			} else res(undefined);

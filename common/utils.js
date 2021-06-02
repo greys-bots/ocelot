@@ -79,7 +79,7 @@ module.exports = {
 	recursivelyReadDirectory,
 	loadCommands,
 	registerSubcommands,
-	genCode: (table, num = 4) =>{
+	genCode: (table = process.env.CHARS, num = 4) =>{
 		var codestring="";
 		var codenum=0;
 		while (codenum<num){

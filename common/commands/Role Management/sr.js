@@ -95,9 +95,8 @@ module.exports.subcommands.modonly = {
 	execute: async (bot, msg, args) => {
 		if(!args[1]) return "mrr! i need at least two arguments.";
 		var name = args[0].toLowerCase().replace(/[<@&>]/g, "");
-		var val = args[1].toLowerCase();
-		if(!Object.keys(VALUES).find(x => x == val)) return "mrr! last argument invalid. i need a truthy or falsy value."
-		val = VALUES[val];
+		var val = VALUES[args[1].toLowerCase()];
+		if(!val) return "mrr! last argument invalid. i need a truthy or falsy value."
 		
 		var groles = await msg.guild.roles.fetch();
 		try {
@@ -129,8 +128,10 @@ module.exports.subcommands.add = {
 		if(!args[0]) return "mrr! i need at least one argument.";
 		var sr = await bot.stores.selfRoles.getAll(msg.guild.id);
 		if(!sr || !sr[0]) return "mrr! no self roles available.";
-		if(!msg.member.permissions.has('MANAGE_ROLES') && !sr.find(r => r.assignable))
-			return 'mrr! all roles are mod-only.';
+
+		var mod = msg.member.permissions.has('MANAGE_ROLES');
+		if(msg.mentions?.members?.first() && !mod) return 'mrr! only mods can add roles to others.';
+		if(!mod && !sr.find(r => r.assignable)) return 'mrr! all roles are mod-only.';
 			
 		var mentions = msg.mentions?.members?.map(m => m);
 		var names = args.slice(0, mentions?.length || args.length);
@@ -146,7 +147,7 @@ module.exports.subcommands.add = {
 
 			var srl = sr.find(s => s.role_id == r.id);
 			if(!srl) { invalid.push(`${r.name} - self role not indexed`); continue; }
-			if(!msg.member.permissions.has('MANAGE_ROLES') && !srl.assignable)
+			if(!mod && !srl.assignable)
 				{ invalid.push(`${r.name} - role is mod-only`); continue; }
 
 			roles.push(r.id);

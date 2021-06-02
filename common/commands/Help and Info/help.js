@@ -11,6 +11,9 @@ module.exports = {
 			var modules = bot.modules.map(m => m);
 			modules.forEach(m => m.commands = m.commands.map(c => c));
 
+			var config = await bot.stores.configs.get(msg.guild.id);
+			var prefix = config?.prefix || bot.prefix;
+
 			var embeds = [{embed: {
 				title: 'about',
 				description: "mrr~ i'm ocelot. i handle roles. here's some info about that:",
@@ -36,19 +39,19 @@ module.exports = {
 				color: parseInt('ffeebb', 16),
 				footer: {
 					icon_url: bot.user.avatarURL(),
-					text: "use the reactions below to flip pages~"
+					text: `prrr~ use the reactions below to flip pages, and use "${prefix}help [command] <subcommand>" for more info.`
 				}
 			}}];
 			for(var i = 0; i < modules.length; i++) {
 				var tmp_embeds = await bot.utils.genEmbeds(bot, modules[i].commands, c => {
-					return {name:  `**${bot.prefix + c.name}**`, value: c.help()}
+					return {name:  `**${prefix + c.name}**`, value: c.help()}
 				}, {
 					title: `**${modules[i].name}**`,
 					description: modules[i].description,
 					color: parseInt(modules[i].color, 16) || parseInt("555555", 16),
 					footer: {
 						icon_url: bot.user.avatarURL(),
-						text: "prrr~"
+						text: `prrr~ use the reactions below to flip pages, and use "${prefix}help [command] <subcommand>" for more info.`
 					}
 				}, 10, {addition: ""})
 				
@@ -68,10 +71,10 @@ module.exports = {
 				title: `Help | ${command.name.toLowerCase()}`,
 				description: command.help(),
 				fields: [
-					{name: "**Usage**", value: `${command.usage().map(c => `**${bot.prefix + command.name}**${c}`).join("\n")}`},
+					{name: "**Usage**", value: `${command.usage().map(c => `**${prefix + command.name}**${c}`).join("\n")}`},
 					{name: "**Aliases**", value: `${command.alias ? command.alias.join(", ") : "(none)"}`},
 					{name: "**Subcommands**", value: `${command.subcommands ?
-							command.subcommands.map(sc => `**${bot.prefix}${sc.name}** - ${sc.help()}`).join("\n") : 
+							command.subcommands.map(sc => `**${prefix}${sc.name}** - ${sc.help()}`).join("\n") : 
 							"(none)"}`}
 				],
 				color: parseInt(command.module.color, 16) || parseInt("555555", 16),
@@ -90,7 +93,7 @@ module.exports = {
 			module.commands = module.commands.map(c => c);
 
 			var embeds = await bot.utils.genEmbeds(bot, module.commands, c => {
-				return {name: `**${bot.prefix + c.name}**`, value: c.help()}
+				return {name: `**${prefix + c.name}**`, value: c.help()}
 			}, {
 				title: `**${module.name}**`,
 				description: module.description,
