@@ -44,7 +44,7 @@ module.exports = {
 		}
 
 		var embeds = await bot.utils.genEmbeds(bot, roles, async dat => {
-			return {name: dat.raw.name, value: dat.description || "*(no description provided)*"}
+			return {name: dat.raw.name, value: `${dat.description || "*(no description provided)*"}\n\nthis role is ${role.assignable ? "self-assignable" : "mod-only"}`}
 		}, {
 			title: "self roles",
 			description: "all available self roles for the server",
