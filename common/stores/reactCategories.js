@@ -67,7 +67,6 @@ class ReactCategoryStore extends Collection {
 			
 			if(data.rows && data.rows[0]) {
 				var category = data.rows[0];
-				console.log(category);
 				category.raw_posts = category.posts;
 				category.posts = (await this.bot.stores.reactPosts.getByRowIDs(server, category.posts)) || [];
 				category.raw_roles = category.roles.map(r => parseInt(r));

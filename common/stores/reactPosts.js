@@ -351,7 +351,6 @@ class ReactPostStore extends Collection {
 			if(react.emoji.id) react.emoji.name = `:${react.emoji.name}:${react.emoji.id}`;
 			var role = post.roles.find(r => [react.emoji.name, `a${react.emoji.name}`].includes(r.emoji));
 			if(!role) return;
-			// var roles = post.roles.map(r => msg.channel.guild.roles.find(x => x.id == r.role_id)).filter(x => x && x.id != role.role_id);
 			role = await msg.channel.guild.roles.fetch(role.role_id);
 			if(!role) return;
 			var member = await msg.channel.guild.members.fetch(user.id);
@@ -364,7 +363,9 @@ class ReactPostStore extends Collection {
 				if(post.required && !member.roles.cache.has(post.required)) return;
 				if(member.roles.cache.has(role.id)) await member.roles.remove(role.id);
 				else await member.roles.add(role.id);
-				if(category?.single) category.roles.forEach(r => { if(member.roles.cache.has(r.role_id) && r.role_id != role.id) member.roles.remove(r.role_id)})
+				if(category?.single) {
+					await member.roles.remove(category.roles.map(r => r.role_id).filter(x => x != role.id));
+				}
 			} catch(e) {
 				console.log(e);
 				return await user.send(`mrr! error:\n${e.message}\nlet a mod know something went wrong.`);
