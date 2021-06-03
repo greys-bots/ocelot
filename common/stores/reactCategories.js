@@ -77,9 +77,7 @@ class ReactCategoryStore extends Collection {
 					category.raw_roles = category.roles.map(r => r.id);
 					await this.update(server, hid, {posts: category.raw_posts, roles: category.raw_roles});
 				}
-				console.log(category.raw_roles);
 				category.roles = category.roles.sort((a, b) => {
-					console.log(a.id, b.id);
 					return category.raw_roles.indexOf(a.id) - category.raw_roles.indexOf(b.id)
 				})
 				this.set(`${server}-${hid}`, category);

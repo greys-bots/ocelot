@@ -156,7 +156,7 @@ module.exports.subcommands.add = {
 		var roles = args.slice(1).join(" ").split(/,\s+/g);
 		var max = category.posts && category.posts[0] ? category.posts.sort((a,b)=> a.page - b.page)[0].page : 0;
 		for(var rl of roles) {
-			var role = msg.guild.roles.cache.find(r => r.id == rl.replace(/[<@&>]/g, "") || r.name.toLowerCase() == rl.toLowerCase());
+			var role = msg.guild.roles.cache.find(r => [r.id, r.name.toLowerCase()].includes(rl.replace(/[<@&>]/g, "").toLowerCase()));
 			if(!role) {
 				result.push({succ: false, name: rl, reason: "role not found"})
 				continue;
@@ -212,9 +212,10 @@ module.exports.subcommands.remove = {
 		var roles = args.slice(1).join(" ").split(/,\s+/g);
 		var max = category.posts ? category.posts.sort((a,b)=> a.page - b.page) : 0;
 		for(var rl of roles) {
-			var role = msg.guild.roles.cache.find(r => r.id == rl.replace(/[<@&>]/g, "") || r.name.toLowerCase() == rl.toLowerCase());
+			var role = msg.guild.roles.cache.find(r => [r.id, r.name.toLowerCase()].includes(rl.replace(/[<@&>]/g, "").toLowerCase()));
 			if(!role) {
-				result.push({succ: false, name: rl, reason: "role not found"})
+				result.push({succ: false, name: rl, reason: "role not found"});
+				continue;
 			}
 
 			var rr = await bot.stores.reactRoles.get(msg.guild.id, role.id);
