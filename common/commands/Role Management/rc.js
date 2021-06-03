@@ -2,14 +2,16 @@ module.exports = {
 	help: ()=> "Manages reaction categories for the server",
 	usage: ()=> [
 		" - Lists available categories and their IDs",
+		" [ID] - Gets info on a specific category",
 		" create [name] [description] - Creates new react role category",
 		" delete [ID] - Deletes category (does not delete associated reaction roles)",
 		" add [ID] [role] - Adds react role to the category",
 		" remove [ID] [role] - Removes react role from the category",
 		" name [ID] [new name] - Changes category name",
 		" description [ID] [new description] - Changes category description",
-		" post [category] [channel] - Posts category's roles in a channel",
-		" info [ID] - Gets info on a category (eg: roles registered to it)"
+		" post [ID] [channel] - Posts category's roles in a channel",
+		" required [ID] [role] - Sets the required role for the category",
+		" unique [ID] [true|false] - Sets whether the roles of the category are unique (ie. users can only get one)"
 	],
 	execute: async (bot, msg, args)=> {
 		var embeds = [];
