@@ -10,7 +10,7 @@ module.exports = {
 				"\nhere's some other stuff for you:",
 			fields: [
 				{name: "Creators", value: "[greysdawn](https://github.com/greysdawn) | GreySkies#9950"},
-				{name: "Invite", value: "[Click](https://discordapp.com/api/oauth2/authorize?client_id=547849702465339403&permissions=268561526&scope=bot)", inline: true},
+				{name: "Invite", value: `[Click](${process.env.INVITE})`, inline: true},
 				{name: "Support Server", value: "[Click](https://discord.gg/EvDmXGt)", inline: true},
 				{name: "Guilds", value: bot.guilds.cache.size, inline: true},
 				{name: "Users", value: bot.users.cache.size, inline: true},

@@ -95,7 +95,7 @@ class ReactPostStore extends Collection {
 			
 			if(data.rows && data.rows[0]) {
 				var roles = [];
-				for(var role of data.rows[0].roles) {
+				for(var role of (data.rows[0].roles || [])) {
 					try {
 						var rl = await this.bot.stores.reactRoles.getByRowID(server, role);
 					} catch(e) {
@@ -361,11 +361,11 @@ class ReactPostStore extends Collection {
 			try {
 				react.users.remove(user.id);
 				if(post.required && !member.roles.cache.has(post.required)) return;
-				if(member.roles.cache.has(role.id)) await member.roles.remove(role.id);
-				else await member.roles.add(role.id);
 				if(category?.single) {
 					await member.roles.remove(category.roles.map(r => r.role_id).filter(x => x != role.id));
 				}
+				if(member.roles.cache.has(role.id)) await member.roles.remove(role.id);
+				else await member.roles.add(role.id);
 			} catch(e) {
 				console.log(e);
 				return await user.send(`mrr! error:\n${e.message}\nlet a mod know something went wrong.`);
