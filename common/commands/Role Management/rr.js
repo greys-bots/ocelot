@@ -164,7 +164,7 @@ module.exports.subcommands.unbind = {
 
 module.exports.subcommands.emoji = {
 	help: ()=> "Changes emoji for a role",
-	usage: ()=> " [role] [emoji] - Changes emoji for the given role",
+	usage: ()=> [" [role] [emoji] - Changes emoji for the given role"],
 	execute: async (bot, msg, args)=> {
 		var rl = args.slice(0, args.length - 1).join(" ").replace(/[<@&>]/g,"").toLowerCase();
 		var role = msg.guild.roles.cache.find(r => [r.id, r.name.toLowerCase()].includes(rl));
@@ -188,7 +188,7 @@ module.exports.subcommands.emoji = {
 
 module.exports.subcommands.description = {
 	help: ()=> "Changes description for a role",
-	usage: ()=> " [role] (new line) [description] - Changes description for the given role",
+	usage: ()=> [" [role] (new line) [description] - Changes description for the given role"],
 	execute: async (bot, msg, args)=> {
 		var nargs = args.join(" ").split("\n");
 		var rl = nargs[0].replace(/[<@&>]/g,"").toLowerCase();
