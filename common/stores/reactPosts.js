@@ -348,9 +348,13 @@ class ReactPostStore extends Collection {
 
 			var post = await this.get(msg.channel.guild.id, msg.id);
 			if(!post) return;
-			if(react.emoji.id) react.emoji.name = `:${react.emoji.name}:${react.emoji.id}`;
-			var role = post.roles.find(r => [react.emoji.name, `a${react.emoji.name}`].includes(r.emoji));
+
+			var name;
+			if(react.emoji.id) name = `:${react.emoji.name}:${react.emoji.id}`;
+			else name = react.emoji.name;
+			var role = post.roles.find(r => [name, `a${name}`].includes(r.emoji));
 			if(!role) return;
+			
 			role = await msg.channel.guild.roles.fetch(role.role_id);
 			if(!role) return;
 			var member = await msg.channel.guild.members.fetch(user.id);
