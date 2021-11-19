@@ -67,7 +67,6 @@ class ReactCategoryStore extends Collection {
 			
 			if(data.rows && data.rows[0]) {
 				var category = data.rows[0];
-				console.log(category);
 				category.raw_posts = category.posts;
 				category.posts = (await this.bot.stores.reactPosts.getByRowIDs(server, category.posts)) || [];
 				category.raw_roles = category.roles.map(r => parseInt(r));
@@ -77,9 +76,7 @@ class ReactCategoryStore extends Collection {
 					category.raw_roles = category.roles.map(r => r.id);
 					await this.update(server, hid, {posts: category.raw_posts, roles: category.raw_roles});
 				}
-				console.log(category.raw_roles);
 				category.roles = category.roles.sort((a, b) => {
-					console.log(a.id, b.id);
 					return category.raw_roles.indexOf(a.id) - category.raw_roles.indexOf(b.id)
 				})
 				this.set(`${server}-${hid}`, category);

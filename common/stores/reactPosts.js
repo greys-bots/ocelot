@@ -95,7 +95,7 @@ class ReactPostStore extends Collection {
 			
 			if(data.rows && data.rows[0]) {
 				var roles = [];
-				for(var role of data.rows[0].roles) {
+				for(var role of (data.rows[0].roles || [])) {
 					try {
 						var rl = await this.bot.stores.reactRoles.getByRowID(server, role);
 					} catch(e) {
@@ -348,10 +348,13 @@ class ReactPostStore extends Collection {
 
 			var post = await this.get(msg.channel.guild.id, msg.id);
 			if(!post) return;
-			if(react.emoji.id) react.emoji.name = `:${react.emoji.name}:${react.emoji.id}`;
-			var role = post.roles.find(r => [react.emoji.name, `a${react.emoji.name}`].includes(r.emoji));
+
+			var name;
+			if(react.emoji.id) name = `:${react.emoji.name}:${react.emoji.id}`;
+			else name = react.emoji.name;
+			var role = post.roles.find(r => [name, `a${name}`].includes(r.emoji));
 			if(!role) return;
-			// var roles = post.roles.map(r => msg.channel.guild.roles.find(x => x.id == r.role_id)).filter(x => x && x.id != role.role_id);
+			
 			role = await msg.channel.guild.roles.fetch(role.role_id);
 			if(!role) return;
 			var member = await msg.channel.guild.members.fetch(user.id);
@@ -362,9 +365,11 @@ class ReactPostStore extends Collection {
 			try {
 				react.users.remove(user.id);
 				if(post.required && !member.roles.cache.has(post.required)) return;
+				if(category?.single) {
+					await member.roles.remove(category.roles.map(r => r.role_id).filter(x => x != role.id));
+				}
 				if(member.roles.cache.has(role.id)) await member.roles.remove(role.id);
 				else await member.roles.add(role.id);
-				if(category?.single) category.roles.forEach(r => { if(member.roles.cache.has(r.role_id) && r.role_id != role.id) member.roles.remove(r.role_id)})
 			} catch(e) {
 				console.log(e);
 				return await user.send(`mrr! error:\n${e.message}\nlet a mod know something went wrong.`);

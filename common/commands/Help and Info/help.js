@@ -6,13 +6,12 @@ module.exports = {
 		" [command] [subcommand] - Displays help for a command's subcommand"
 	],
 	execute: async (bot, msg, args) => {
+		var config = await bot.stores.configs.get(msg.guild.id);
+		var prefix = config?.prefix ? config.prefix : bot.prefix;
 		if(!args[0]) {
 			//setup
 			var modules = bot.modules.map(m => m);
 			modules.forEach(m => m.commands = m.commands.map(c => c));
-
-			var config = await bot.stores.configs.get(msg.guild.id);
-			var prefix = config?.prefix || bot.prefix;
 
 			var embeds = [{embed: {
 				title: 'about',
