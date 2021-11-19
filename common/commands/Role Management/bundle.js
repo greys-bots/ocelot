@@ -149,6 +149,8 @@ subcommands.add = {
 				await m1.delete();
 				return "mrr! invalid password. remember that they're case sensitive.";
 			}
+
+			await m1.delete()
 		}
 
 		var targets;
