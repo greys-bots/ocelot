@@ -18,9 +18,10 @@ class BundleStore extends Collection {
 					name,
 					description,
 					roles,
-					assignable
-				) VALUES ($1, $2, $3, $4, $5, $6)`,
-				[hid, server, data.name, data.description, data.roles || [], data.assignable || false]);
+					assignable,
+					pass
+				) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+				[hid, server, data.name, data.description, data.roles || [], data.assignable || false, data.pass]);
 			} catch(e) {
 				console.log(e);
 		 		return rej(e.message);
@@ -39,9 +40,10 @@ class BundleStore extends Collection {
 					name,
 					description,
 					roles,
-					assignable
-				) VALUES ($1, $2, $3, $4, $5, $6)`,
-				[data.hid, server, data.name, data.description, data.roles || [], data.assignable || false]);
+					assignable,
+					pass
+				) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+				[hid, server, data.name, data.description, data.roles || [], data.assignable || false, data.pass]);
 			} catch(e) {
 				console.log(e);
 		 		return rej(e.message);

@@ -54,7 +54,8 @@ module.exports = async (bot) => {
 	    	name 			TEXT,
 	    	description 	TEXT,
 	    	roles 			TEXT[],
-	    	assignable		BOOLEAN
+	    	assignable		BOOLEAN,
+	    	pass 			TEXT
 	    );
 
 		CREATE TABLE IF NOT EXISTS selfroles (
@@ -72,16 +73,43 @@ module.exports = async (bot) => {
 			blacklist 	TEXT[],
 			type 		INTEGER
 		);
+
+		-- misc
+
+		CREATE TABLE IF NOT EXISTS extras (
+			id 			SERIAL PRIMARY KEY,
+			key 		TEXT,
+			val 		TEXT
+		);
 	`);
 	
 	bot.stores = {};
 	var files = fs.readdirSync(__dirname);
 	for(var file of files) {
-		if(["__db.js", "__migrations.js", "tmp.js"].includes(file)) continue;
+		if(["__db.js", "migrations", "tmp.js"].includes(file)) continue;
 		var name = file.replace(/\.js/i, "");
 
 		bot.stores[name] = require(__dirname+'/'+file)(bot, db);
 		if(bot.stores[name].init) bot.stores[name].init();
+	}
+
+	files = fs.readdirSync(__dirname + '/migrations');
+	console.log(files);
+	var version = parseInt((await db.query(`SELECT * FROM extras WHERE key = 'version'`)).rows[0]?.val || -1);
+	if(files.length > version + 1) {
+		for(var i = version + 1; i < files.length; i++) {
+			if(!files[i]) continue;
+			var migration = require(`${__dirname}/migrations/${files[i]}`);
+			try {
+				await migration(bot, db);
+			} catch(e) {
+				console.log(e);
+				process.exit(1);
+			}
+
+			if(version == -1) await db.query(`INSERT INTO extras (key, val) VALUES ('version', 0)`);
+			else await db.query(`UPDATE extras SET val = $1 WHERE key = 'version'`, [i]);
+		}
 	}
 
 	return db;
