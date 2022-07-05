@@ -45,18 +45,18 @@ module.exports = {
 				footer: {text: `ID: ${category.hid} | this category's roles ${category.single ? "are" : "are not"} unique.`}
 					}, 10, {addition: ""});
 				} else {
-					tmp = {embed: {
+					tmp = {
 						title: `${category.name} (${category.hid})`,
 						description: category.description,
 						fields: [
 							{name: "no roles!", value: "this category is empty."}
 						]
-					}}
+					}
 				}
-				embeds = embeds.concat(tmp);
+				embeds.push(tmp);
 			}
 
-			embeds.forEach((e, i) => e.embed.title = `${e.embed.title} (page ${i+1}/${embeds.length}, ${categories.length} categories total)`);
+			embeds.forEach((e, i) => e.title += ` (page ${i+1}/${embeds.length}, ${categories.length} categories total)`);
 		}
 
 		return embeds;
@@ -271,9 +271,9 @@ module.exports.subcommands.post = {
 		});
 
 		for(var i = 0; i < posts.length; i++) {
-			var message = await channel.send({embed: posts[i].embed});
+			var message = await channel.send({embeds: [posts[i].embed]});
 			posts[i].emoji.forEach(r => message.react(r));
-			var post = await bot.stores.reactPosts.create(msg.guild.id, channel.id, message.id, {...posts[i], page: i, category: category.hid, single: category.single, required: category.required});
+			var post = await bot.stores.reactPosts.create(msg.guild.id, channel.id, message.id, {...posts[i], page: i, category: category.hid});
 			category.raw_posts.push(post.id);
 		}
 
@@ -335,11 +335,11 @@ module.exports.subcommands.required = {
 			if(!category.required) return "mrr! that category doesn't have a required role.";
 			var role = msg.guild.roles.cache.find(r => r.id == category.required);
 			if(!role) return "mrr! the required role for that category is invalid or deleted.";
-			var message = await msg.channel.send({embed: {
+			var message = await msg.channel.send({embeds: [{
 				title: "current role",
 				description: role.mention,
 				footer: {text: `to clear it, react with :x: or type "clear"`}
-			}});
+			}]});
 			await message.react('❌');
 
 			var confirmation = await bot.utils.handlechoices(bot, message, msg.author, [

@@ -20,66 +20,22 @@ module.exports = async (msg, bot)=>{
 		`Message: ${msg.content}`,
 		`--------------------`
 	];
-	let args = msg.content.replace(prefix, "").split(" ");
-	if(!args[0]) args.shift();
-	if(!args[0]) return msg.channel.send("*prrrrr* that's me~");
 
-	let {command, nargs} = await bot.parseCommand(bot, msg, args);
+	var content = msg.content.slice(prefix.length);
+	let {command, args} = await bot.handlers.command.parse(content);
 	if(!command) {
 		log.push('- Command not found -');
 		console.log(log.join('\r\n'));
-		bot.writeLog(log.join('\r\n'));
-		return await msg.channel.send("mrr! i need a real command.");
-	}
-	if(command.group) nargs = bot.utils.groupArgs(nargs);
-
-	if(!msg.guild && command.guildOnly) {
-		console.log("- Command is guild only -")
-		return await msg.channel.send("mrr! that's a guild only command.");
-	}
-
-	if(msg.guild) {
-		var check = await bot.utils.checkPermissions(bot, msg, command);
-		if(!check) {
-			log.push('- Missing permissions -');
-			console.log(log.join('\r\n'));
-			bot.writeLog(log.join('\r\n'));
-			return await msg.channel.send("mrr! you need more permissions for that command.");
-		}
+		return await msg.channel.send("Command not found!");
 	}
 	
 	try {
-		var result = await command.execute(bot, msg, nargs, config);
+		await bot.handlers.command.handle({command, args, msg, config});
 	} catch(e) {
 		console.log(e);
 		log.push(`Error: ${e}`);
 		log.push(`--------------------`);
-		msg.channel.send('mrr! error:\n'+e.message);
+		await msg.channel.send('There was an error!')
 	}
 	console.log(log.join('\r\n'));
-	bot.writeLog(log.join('\r\n'));
-	
-	if(!result) return;
-	if(typeof result == "object" && result[0]) { //embeds
-		var message = await msg.channel.send(result[0]);
-		if(result[1]) {
-			if(!bot.menus) bot.menus = {};
-			bot.menus[message.id] = {
-				user: msg.author.id,
-				data: result,
-				index: 0,
-				timeout: setTimeout(()=> {
-					if(!bot.menus[message.id]) return;
-					try {
-						message.reactions.removeAll();
-					} catch(e) {
-						console.log(e);
-					}
-					delete bot.menus[message.id];
-				}, 900000),
-				execute: bot.utils.paginateEmbeds
-			};
-			["⬅️", "➡️", "⏹️"].forEach(r => message.react(r));
-		}
-	} else await msg.channel.send(result);
 }

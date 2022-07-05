@@ -13,7 +13,7 @@ module.exports = {
 			var modules = bot.modules.map(m => m);
 			modules.forEach(m => m.commands = m.commands.map(c => c));
 
-			var embeds = [{embed: {
+			var embeds = [{
 				title: 'about',
 				description: "mrr~ i'm ocelot. i handle roles. here's some info about that:",
 				fields: [
@@ -40,7 +40,7 @@ module.exports = {
 					icon_url: bot.user.avatarURL(),
 					text: `prrr~ use the reactions below to flip pages, and use "${prefix}help [command] <subcommand>" for more info.`
 				}
-			}}];
+			}];
 			for(var i = 0; i < modules.length; i++) {
 				var tmp_embeds = await bot.utils.genEmbeds(bot, modules[i].commands, c => {
 					return {name:  `**${prefix + c.name}**`, value: c.help()}
@@ -58,7 +58,7 @@ module.exports = {
 			}
 
 			for(let i=0; i<embeds.length; i++) {
-				if(embeds.length > 1) embeds[i].embed.title += ` (page ${i+1}/${embeds.length}, ${bot.commands.size} commands total)`;
+				if(embeds.length > 1) embeds[i].title += ` (page ${i+1}/${embeds.length}, ${bot.commands.size} commands total)`;
 			}
 
 			return embeds;
@@ -66,7 +66,7 @@ module.exports = {
 
 		let {command} = await bot.parseCommand(bot, msg, args);
 		if(command) {
-			var embed = {embed: {
+			var embed = {
 				title: `Help | ${command.name.toLowerCase()}`,
 				description: command.help(),
 				fields: [
@@ -81,11 +81,11 @@ module.exports = {
 					icon_url: bot.user.avatarURL(),
 					text: "arguments like [this] are required, arguments like <this> are optional."
 				}
-			}};
-			if(command.desc) embed.embed.fields.push({name: "**Extra Info**", value: command.desc()});
-			if(command.permissions) embed.embed.fields.push({name: "**Permissions**", value: command.permissions.join(", ")});
+			};
+			if(command.desc) embed.fields.push({name: "**Extra Info**", value: command.desc()});
+			if(command.permissions) embed.fields.push({name: "**Permissions**", value: command.permissions.join(", ")});
 
-			return embed;
+			return {embeds: [embed]};
 		} else {
 			let module = bot.modules.get(args[0].toLowerCase());
 			if(!module) return "mrr! couldn't find that command or module.";
@@ -104,7 +104,7 @@ module.exports = {
 			}, 10, {addition: ""});
 
 			for(let i=0; i<embeds.length; i++) {
-				if(embeds.length > 1) embeds[i].embed.title += ` (page ${i+1}/${embeds.length}, ${Object.keys(bot.commands).length} commands total)`;
+				if(embeds.length > 1) embeds[i].title += ` (page ${i+1}/${embeds.length}, ${Object.keys(bot.commands).length} commands total)`;
 			}
 
 			return embeds;

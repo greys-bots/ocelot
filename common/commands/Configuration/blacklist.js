@@ -24,14 +24,14 @@ module.exports = {
 			else if(user) users.push(user.toString());
 		}
 
-		return {embed: {
+		return {embeds: [{
 			title: "blacklist",
 			description: "people who are denied usage of this bot",
 			fields: [
 				{name: "roles", value: roles[0] ? roles.join("\n") : "(none)"},
 				{name: "users", value: users[0] ? users.join("\n") : "(none)"}
 			]
-		}}
+		}]}
 	},
 	permissions: ["MANAGE_GUILD"],
 	alias: ["bl"],
@@ -68,13 +68,13 @@ module.exports.subcommands.add = {
 			return "mrr! error:\n"+e;
 		}
 
-		return {embed: {
+		return {embeds: [{
 			title: "results",
 			fields: [
 				{name: "added", value: added[0] ? added.map(x => x.toString()).join("\n") : "(none)"},
 				{name: "not added", value: invalid[0] ? invalid.join("\n") : "(none)"}
 			]
-		}}
+		}]}
 	},
 	alias: ["a", "+"]
 }
@@ -108,13 +108,13 @@ module.exports.subcommands.remove = {
 			return "mrr! error:\n"+e;
 		}
 
-		return {embed: {
+		return {embeds: [{
 			title: "results",
 			fields: [
 				{name: "removed", value: removed[0] ? removed.map(x => x.toString()).join("\n") : "(none)"},
 				{name: "not removed", value: invalid[0] ? invalid.join("\n") : "(none)"}
 			]
-		}}
+		}]}
 	},
 	alias: ["r", "rmv", "-"]
 }

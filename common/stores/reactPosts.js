@@ -1,6 +1,76 @@
-const {Collection} = require("discord.js");
+const { Models: { DataStore, DataObject } } = require('frame');
+const KEYS = {
+	id: { },
+	server_id: { },
+	channel_id: { },
+	message_id: { },
+	category: { },
+	roles: { patch: true },
+	page: { },
+	single: { patch: true },
+	required: { patch: true}
+}
 
-class ReactPostStore extends Collection {
+class ReactPost extends DataObject {
+	constructor(store, keys, data) {
+		super(store, keys, data);
+	}
+
+	async fetchMessage() {
+		var bot = this.store.bot;
+
+		try {
+			var guild = await bot.guilds.fetch(this.server_id);
+			var channel = await guild.channels.fetch(this.channel_id);
+			var message = await channel.messages.fetch(this.message_id);
+		} catch(e) {
+			return Promise.reject(e);
+		}
+
+		this.message = message;
+		return message;
+	}
+
+	async fetchCategory() {
+		if(!this.category) return;
+		var category = await this.store.bot.stores.reactCategories.get(this.server_id, this.category);
+		
+		this.reactCategory = category;
+		return category;
+	}
+
+	async fetchReactRoles() {
+		var roles = await this.store.bot.stores.reactRoles.getByRowIDs(this.server_id, this.roles)
+
+		this.reactRoles = roles;
+		return roles;
+	}
+
+	async fetchGuildRoles() {
+		if(!this.reactRoles) await this.fetchReactRoles();
+
+		try {
+			var guild = await bot.guilds.fetch(this.server_id);
+			var roles = [];
+			for(var r of this.reactRoles) {
+				try {
+					var rl = await guild.roles.fetch(r.role_id);
+				} catch(e) {
+					continue;
+				}
+
+				roles.push(rl);
+			}
+		} catch(e) {
+			return Promise.reject(e);
+		}
+
+		this.guildRoles = roles;
+		return roles;
+	}
+}
+
+class ReactPostStore extends DataStore {
 	constructor(bot, db) {
 		super();
 
@@ -18,42 +88,41 @@ class ReactPostStore extends Collection {
 		})
 
 		this.bot.on("messageDelete", async (msg) => {
-			return new Promise(async (res, rej) => {
-				if(msg.channel.type == 'dm') return;
+			if(msg.channel.type == 'dm') return;
 
-				try {
-					var post = await this.get(msg.channel.guild.id, msg.id);
-					if(!post) return;
-					await this.delete(post.server_id, post.message_id);
-				} catch(e) {
-					console.log(e);
-					return rej(e.message || e);
-				}
-			})	
+			try {
+				var post = await this.get(msg.channel.guild.id, msg.id);
+				if(!post) return;
+				await this.delete(post.server_id, post.message_id);
+			} catch(e) {
+				console.log(e);
+				return Promise.reject(e.message || e);
+			}	
 		})
 	}
 
-	async create(server, channel, message, data = {}) {
-		return new Promise(async (res, rej) => {
-			try {
-				await this.db.query(`INSERT INTO reactposts (
-					server_id,
-					channel_id,
-					message_id,
-					category,
-					roles,
-					page,
-					single,
-					required
-				) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-				[server, channel, message, data.category, data.roles || [], data.page || 0, data.single, data.required]);
-			} catch(e) {
-				console.log(e);
-		 		return rej(e.message);
-			}
-			
-			res(await this.get(server, message));
-		})
+	async create(data = {}) {
+		try {
+			var c = await this.db.query(`INSERT INTO reactposts (
+				server_id,
+				channel_id,
+				message_id,
+				category,
+				roles,
+				page,
+				single,
+				required
+			) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+			RETURNING id`,
+			[data.server_id, data.channel_id, data.message_id,
+			 data.category, data.roles || [], data.page || 0,
+			 data.single, data.required]);
+		} catch(e) {
+			console.log(e);
+	 		return Promise.reject(e.message);
+		}
+		
+		return await this.getID(c.rows[0].id);
 	}
 
 	async index(server, channel, message, data = {}) {
@@ -72,240 +141,134 @@ class ReactPostStore extends Collection {
 				[server, channel, message, data.category, data.roles || [], data.page || 0, data.single, data.required]);
 			} catch(e) {
 				console.log(e);
-		 		return rej(e.message);
+		 		return Promise.reject(e.message);
 			}
 			
 			res();
 		})
 	}
 
-	async get(server, message, forceUpdate = false) {
-		return new Promise(async (res, rej) => {
-			if(!forceUpdate) {
-				var post = super.get(`${server}-${message}`);
-				if(post) return res(post);
-			}
+	async get(server, message) {
+		try {
+			var data = await this.db.query(`SELECT * FROM reactposts WHERE server_id = $1 AND message_id = $2`,[server, message]);
+		} catch(e) {
+			console.log(e);
+			return Promise.reject(e.message);
+		}
 
-			try {
-				var data = await this.db.query(`SELECT * FROM reactposts WHERE server_id = $1 AND message_id = $2`,[server, message]);
-			} catch(e) {
-				console.log(e);
-				return rej(e.message);
-			}
-			
-			if(data.rows && data.rows[0]) {
-				var roles = [];
-				for(var role of (data.rows[0].roles || [])) {
-					try {
-						var rl = await this.bot.stores.reactRoles.getByRowID(server, role);
-					} catch(e) {
-						continue;
-					}
-					roles.push(rl);
-				}
-
-				var msg;
-				try {
-					var channel = await this.bot.channels.fetch(data.rows[0].channel_id);
-					msg = await channel.messages.fetch(data.rows[0].message_id);
-				} catch(e) {
-					console.log(e);
-					this.delete(server, message);
-					return rej("post deleted or no longer accessible.");
-				}
-
-				data.rows[0].raw_roles = data.rows[0].roles;
-				data.rows[0].roles = roles;
-				data.rows[0].message = msg;
-				this.set(`${server}-${message}`, data.rows[0])
-				res(data.rows[0])
-			} else res(undefined);
-		})
+		if(data.rows?.[0]) new ReactPost(this, KEYS, data.rows[0]);
+		else return new ReactPost(this, KEYS, { server_id: server });
 	}
 
-	async getByRowID(server, id) {
-		return new Promise(async (res, rej) => {
-			try {
-				var data = await this.db.query(`SELECT * FROM reactposts WHERE server_id = $1 AND id = $2`,[server, id]);
-			} catch(e) {
-				console.log(e);
-				return rej(e.message);
-			}
-			
-			if(data.rows && data.rows[0]) {
-				for(var role of data.rows[0].roles) {
-					try {
-						var rl = await this.bot.stores.reactRoles.getByRowID(server, role);
-					} catch(e) {
-						continue;
-					}
-					roles.push(rl);
-				}
+	async getID(id) {
+		try {
+			var data = await this.db.query(`SELECT * FROM reactposts WHERE id = $1`,[id]);
+		} catch(e) {
+			console.log(e);
+			return Promise.reject(e.message);
+		}
 
-				var msg;
-				try {
-					var channel = await this.bot.channels.fetch(data.rows[0].channel_id);
-					msg = await channel.messages.fetch(data.rows[0].message_id);
-				} catch(e) {
-					console.log(e);
-					this.delete(server, message);
-					return rej("Post deleted or no longer accessible");
-				}
-
-				data.rows[0].raw_roles = data.rows[0].roles;
-				data.rows[0].roles = posts;
-				data.rows[0].message = msg;
-				res(data.rows[0])
-			} else res(undefined);
-		})
+		if(data.rows?.[0]) new ReactPost(this, KEYS, data.rows[0]);
+		else return new ReactPost(this, KEYS, { });
 	}
 
 	async getAll(server) {
-		return new Promise(async (res, rej) => {
-			try {
-				var data = await this.db.query(`SELECT * FROM reactposts WHERE server_id = $1`,[server]);
-			} catch(e) {
-				console.log(e);
-				return rej(e.message);
-			}
-			
-			if(data.rows && data.rows[0]) {
-				for(var i = 0; i < data.rows.length; i++) {
-					var roles = [];
-					for(var role of data.rows[i].roles) {
-						try {
-							var rl = await this.bot.stores.reactRoles.getByRowID(server, role);
-						} catch(e) {
-							continue;
-						}
-						roles.push(rl);
-					}
-
-					var msg;
-					try {
-						var channel = await this.bot.channels.fetch(data.rows[i].channel_id);
-						msg = await channel.messages.fetch(data.rows[i].message_id);
-					} catch(e) {
-						console.log(e);
-						this.delete(server, data.rows[i].message_id);
-						continue;
-					}
-					data.rows[i].raw_roles = data.rows[i].roles;
-					data.rows[i].roles = roles;
-					data.rows[i].message = msg;
-				}
-					
-				res(data.rows)
-			} else res(undefined);
-		})
+		try {
+			var data = await this.db.query(`SELECT * FROM reactposts WHERE server_id = $1`,[server]);
+		} catch(e) {
+			console.log(e);
+			return Promise.reject(e.message);
+		}
+		
+		if(data.rows && data.rows[0]) return data.rows.map(d => new ReactPost(this, KEYS, d));
+		else return undefined;
 	}
 
 	async getByRole(server, id) {
+		try {
+			var data = await this.db.query(`SELECT * FROM reactposts WHERE server_id = $1 AND $2 = ANY(reactposts.roles)`,[server, id]);
+		} catch(e) {
+			console.log(e);
+			return Promise.reject(e.message);
+		}
+		
+		if(data.rows && data.rows[0]) return data.rows.map(d => new ReactPost(this, KEYS, d));
+		else return undefined;
+	}
+
+	async getIDs(server, ids) {
+		try {
+			var data = await this.db.query(`SELECT * FROM reactposts WHERE id = ANY($1)`,[ids]);
+		} catch(e) {
+			console.log(e);
+			return Promise.reject(e.message);
+		}
+
+		if(data.rows && data.rows[0]) return data.rows.map(d => new ReactPost(this, KEYS, d));
+		else return undefined;
+	}
+
+	async update(id, data = {}) {
 		return new Promise(async (res, rej) => {
 			try {
-				var data = await this.db.query(`SELECT * FROM reactposts WHERE server_id = $1 AND $2 = ANY(reactposts.roles)`,[server, id]);
+				await this.db.query(`UPDATE reactposts SET ${Object.keys(data).map((k, i) => k+"=$"+(i+2)).join(",")} WHERE id = $1`,[id, ...Object.values(data)]);
 			} catch(e) {
 				console.log(e);
-				return rej(e.message);
+				return Promise.reject(e.message);
 			}
 			
-			if(data.rows && data.rows[0]) {
-				for(var i = 0; i < data.rows.length; i++) {
-					var roles = [];
-					for(var role of data.rows[i].roles) {
-						try {
-							var rl = await this.bot.stores.reactRoles.getByRowID(server, role);
-						} catch(e) {
-							continue;
-						}
-						roles.push(rl);
-					}
-
-					var msg;
-					try {
-						var channel = await this.bot.channels.fetch(data.rows[i].channel_id);
-						msg = await channel.messages.fetch(data.rows[i].message_id);
-					} catch(e) {
-						console.log(e);
-						this.delete(server, data.rows[i].message_id);
-						continue;
-					}
-					data.rows[i].raw_roles = data.rows[i].roles;
-					data.rows[i].roles = roles;
-					data.rows[i].message = msg;
+			var post = await this.getID(id);
+			var message = await post.fetchMessage();
+			var rrs = await post.fetchReactRoles();
+			var rls = await post.fetchRoles();
+			var rrs = rrs.map(r => {
+				var rl = rls.find(x => x.id == r.role_id);
+				return {
+					...r,
+					name: rl.name
 				}
-					
-				res(data.rows)
-			} else res(undefined);
-		})
-	}
+			})
 
-	async getByRowIDs(server, ids) {
-		return new Promise(async (res, rej) => {
-			if(ids.length == 0) return res([]);
-			try {
-				var data = await this.db.query(`SELECT * FROM reactposts WHERE server_id = $1 AND id = ANY($2)`,[server, ids]);
-			} catch(e) {
-				console.log(e);
-				return rej(e.message);
+			if(!message) {
+				await this.delete(id);
+				return;
 			}
-			
-			if(data.rows && data.rows[0]) {
-				res(data.rows)
-			} else res(undefined);
-		})
-	}
 
-	async update(server, message, data = {}) {
-		return new Promise(async (res, rej) => {
-			try {
-				if(data.roles || data.single || data.required)
-					await this.db.query(`UPDATE reactposts SET roles = $1, single = $2, required = $3 WHERE server_id = $4 AND message_id = $5`,
-						[data.roles, data.single, data.required, server, message]);
-			} catch(e) {
-				console.log(e);
-				return rej(e.message);
-			}
-			
-			var post = await this.get(server, message, true);
-
-			if(post.message?.embeds[0] && post.message.author.id == this.bot.user.id) { //react post from us
+			if(message.embeds[0] && message.author.id == this.bot.user.id) { //react post from us
 				if(!data.embed && data.roles) { //regen roles
-					data = await this.bot.utils.genReactPosts(this.bot, post.roles, {
-						title: post.message.embeds[0].title,
-						description: post.message.embeds[0].description,
-						footer: post.message.embeds[0].footer
+					data = await this.bot.utils.genReactPosts(this.bot, post.reactRoles, {
+						title: message.embeds[0].title,
+						description: message.embeds[0].description,
+						footer: message.embeds[0].footer
 					})
 					data = data[0];
-				}
-
-				if(data.embed) {
-					try {
-						await post.message.edit({embed: data.embed});
-						await post.message.reactions.removeAll()
-						for(emoji of data.emoji) await post.message.react(emoji);
-					} catch(e) {
-						console.log(e);
-						return rej(e.message);
-					}
 				} else if(!data.embed && post.page > 0) {
 					try {
 						await this.delete(server, message);
-						await post.message.delete();
+						await message.delete();
 					} catch(e) {
-						return rej(e.message || e);
+						return Promise.reject(e.message || e);
+					}
+				} else {
+					try {
+						await message.edit({embeds: [data.embed]});
+						await message.reactions.removeAll()
+						for(emoji of data.emoji) await message.react(emoji);
+					} catch(e) {
+						console.log(e);
+						return Promise.reject(e.message);
 					}
 				}
 			} else { //probably not a react post, or not from us; bound post instead
 				var channel = await this.bot.channels.fetch(post.channel_id);
-				var msg = await channel.messages.fetch(post.message_id);
+				var msg = await channel.messages.fetch(message_id);
 
 				if(!data.emoji) data.emoji = post.roles.map(r => r.emoji);
 				await msg.reactions.removeAll();
 				for(var emoji of data.emoji) await msg.react(emoji);
 			}
 			
-			res(post);
+			return post;
 		})
 	}
 
@@ -316,7 +279,7 @@ class ReactPostStore extends Collection {
 				if(data.roles) await this.db.query(`UPDATE reactposts SET roles = $1 WHERE server_id = $2, message_id = $3`,[data.roles, server, message]);
 			} catch(e) {
 				console.log(e);
-				return rej(e.message);
+				return Promise.reject(e.message);
 			}
 			
 			var post = await this.get(server, message, true);
@@ -330,10 +293,9 @@ class ReactPostStore extends Collection {
 		return new Promise(async (res, rej) => {
 			try {
 				await this.db.query(`DELETE FROM reactposts WHERE server_id = $1 AND message_id = $2`, [server, message]);
-				super.delete(`${server}-${message}`);
 			} catch(e) {
 				console.log(e);
-				return rej(e.message || e);
+				return Promise.reject(e.message || e);
 			}
 
 			res();

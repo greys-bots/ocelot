@@ -33,14 +33,14 @@ module.exports = {
 			var role = roles.find(r => [r.raw.name.toLowerCase(), r.role_id].includes(args[0].toLowerCase().replace(/[<@&>]/g, "")));
 			if(!role) return "mrr! role not found.";
 
-			return {embed: {
+			return {embeds: [{
 				title: role.raw.name,
 				description: role.description || "*(no description)*",
 				fields: [
 					{name: "self assignable", value: role.assignable ? "yes" : "no"}
 				],
 				color: role.color || 0x202020
-			}}
+			}]}
 		}
 
 		var embeds = await bot.utils.genEmbeds(bot, roles, async dat => {
@@ -160,20 +160,20 @@ module.exports.subcommands.add = {
 		};
 
 		var embeds = [
-			{embed: {
+			{
 				title: "Results - invalid roles",
 				color: 0xaa5555
-			}},
-			{embed: {
+			},
+			{
 				title: "Results - failed adds",
 				color: 0xaa5555
-			}}
+			}
 		];
-		if(invalid[0]) embeds[0].embed.description = invalid.join('\n');
-		else embeds[0].embed.description = '(none)';
+		if(invalid[0]) embeds[0].description = invalid.join('\n');
+		else embeds[0].description = '(none)';
 
-		if(failed[0]) embeds[1].embed.description = failed.join('\n');
-		else embeds[1].embed.description = '(none)';
+		if(failed[0]) embeds[1].description = failed.join('\n');
+		else embeds[1].description = '(none)';
 
 		return embeds;
 	},
@@ -222,20 +222,20 @@ module.exports.subcommands.remove = {
 		};
 
 		var embeds = [
-			{embed: {
+			{
 				title: "Results - invalid roles",
 				color: 0xaa5555
-			}},
-			{embed: {
+			},
+			{
 				title: "Results - failed removes",
 				color: 0xaa5555
-			}}
+			}
 		];
-		if(invalid[0]) embeds[0].embed.description = invalid.join('\n');
-		else embeds[0].embed.description = '(none)';
+		if(invalid[0]) embeds[0].description = invalid.join('\n');
+		else embeds[0].description = '(none)';
 
-		if(failed[0]) embeds[1].embed.description = failed.join('\n');
-		else embeds[1].embed.description = '(none)';
+		if(failed[0]) embeds[1].description = failed.join('\n');
+		else embeds[1].description = '(none)';
 
 		return embeds;
 	},

@@ -2,7 +2,7 @@ module.exports = {
 	help: ()=> "View info about the bot",
 	usage: ()=> [" - Sends the bot's about message"],
 	execute: async (bot, msg, args) => {
-		return {embed: {
+		return {embeds: [{
 			title: "about me",
 			description:
 				"*prrr* i'm ocelot~ i handle roles."+
@@ -17,7 +17,7 @@ module.exports = {
 				{name: "Want to support the creators?", value: "[Patreon](https://patreon.com/greysdawn) | [Ko-Fi](https://ko-fi.com/greysdawn)"}
 			]
 
-		}};
+		}]};
 	},
 	alias: ["abt"]
 }

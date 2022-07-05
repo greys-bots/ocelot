@@ -34,17 +34,17 @@ module.exports = {
 
 		var embeds = [];
 		for(var b of bundles) {
-			var e = {embed: {
+			var e = {
 				title: b.name,
 				description: b.description || "(no description)",
 				fields: b.roles.map(r => { return {name: r.name, value: `Preview: ${r.toString()}` } }),
 				footer: {text: `ID: ${b.hid}`}
-			}}
-			if(b.modonly) e.embed.footer += ` | this bundle is mod-only.`;
+			}
+			if(b.modonly) e.footer += ` | this bundle is mod-only.`;
 			embeds.push(e)
 		}
 
-		if(embeds.length > 1) for(var i = 0; i < embeds.length; i++) embeds[i].embed.title += ` (${i + 1}/${embeds.length})`;
+		if(embeds.length > 1) for(var i = 0; i < embeds.length; i++) embeds[i].title += ` (${i + 1}/${embeds.length})`;
 		return embeds;
 	},
 	group: true,
@@ -86,19 +86,9 @@ subcommands.create = {
 		var assignable;
 		var message = await msg.channel.send("do you want this bundle to be self-assignable?");
 		['✅', '❌'].forEach(r => message.react(r));
-		var conf = await bot.utils.handleChoices(bot, message, msg.author, [
-			{
-				accepted: ['y', 'yes', '1', '✅'],
-				name: 'yes'
-			},
-			{
-				accepted: ['n', 'no', '0', '❌'],
-				name: 'no'
-			}
-		]);
+		var conf = await bot.utils.getConfirmation(bot, message, msg.author);
 
-		if(conf.name == 'invalid') return conf.msg;
-		if(conf.name == 'yes') assignable = true;
+		if(conf.confirmed) assignable = true;
 		else assignable = false;
 
 		var valid = [];
@@ -167,11 +157,11 @@ subcommands.add = {
 			}
 		}
 
-		return {embed: {
+		return {embeds: [{
 			title: 'failed',
 			description: failed.length ? '' : '(none)',
 			fields: failed
-		}}
+		}]}
 	},
 	guildOnly: true,
 	alias: ['+', 'a']
@@ -207,11 +197,11 @@ subcommands.remove = {
 			}
 		}
 
-		return {embed: {
+		return {embeds: [{
 			title: 'failed',
 			description: failed.length ? '' : '(none)',
 			fields: failed
-		}}
+		}]}
 	},
 	guildOnly: true,
 	alias: ['i', 'r', 'rmv']

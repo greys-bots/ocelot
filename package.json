@@ -10,8 +10,11 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "discord.js": "^12.5.3",
+    "@discordjs/rest": "^0.5.0",
+    "discord-api-types": "^0.36.0",
+    "discord.js": "^13.8.1",
     "dotenv": "^8.6.0",
+    "frame": "github:greys-bots/frame",
     "pg": "^8.6.0"
   }
 }
