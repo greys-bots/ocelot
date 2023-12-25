@@ -43,7 +43,7 @@ const bot = new FrameClient({
 });
 
 async function setup() {
-	var { db, stores } = await Handlers.DatabaseHandler(bot, __dirname + '/../common/stores');
+	var { db, stores } = await Handlers.DatabaseHandler(bot, __dirname + '/stores');
 	bot.db = db;
 	bot.stores = stores;
 
@@ -51,8 +51,8 @@ async function setup() {
 	files.forEach(f => bot.on(f.slice(0,-3), (...args) => require(__dirname + "/events/"+f)(...args,bot)));
 
 	bot.handlers = {};
-	bot.handlers.interaction = Handlers.InteractionHandler(bot, __dirname + '/../common/slashcommands');
-	bot.handlers.command = Handlers.CommandHandler(bot, __dirname + '/../common/commands');
+	bot.handlers.interaction = Handlers.InteractionHandler(bot, __dirname + '/slashcommands');
+	bot.handlers.command = Handlers.CommandHandler(bot, __dirname + '/commands');
 	files = fs.readdirSync(__dirname + "/handlers");
 	for(var f of files) {
 		var n = f.slice(0, -3);
