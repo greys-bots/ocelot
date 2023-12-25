@@ -79,6 +79,20 @@ class ReactPostStore extends DataStore {
 	};
 
 	async init() {
+		await this.db.query(`
+			CREATE TABLE IF NOT EXISTS reactposts (
+				id				SERIAL PRIMARY KEY,
+				server_id		TEXT,
+				channel_id		TEXT,
+				message_id		TEXT,
+				category 		TEXT,
+				roles			TEXT[],
+				page 			INTEGER,
+		    	single 			BOOLEAN,
+		    	required 		TEXT
+			);
+		`);
+		
 		this.bot.on("messageReactionAdd", (...args) => {
 			try {
 				this.handleReactions(...args)

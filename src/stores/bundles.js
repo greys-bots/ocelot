@@ -1,6 +1,37 @@
-const {Collection} = require("discord.js");
+const { Models: { DataStore, DataObject } } = require('frame');
 
-class BundleStore extends Collection {
+const KEYS = {
+	id: { },
+	hid: { },
+	server_id: { },
+	name: { patch: true },
+	description: { patch: true },
+	roles: { patch: true },
+	assignable: { patch: true },
+	pass: { patch: true }
+}
+
+class Bundle extends DataObject {
+	constructor(store, keys, data) {
+		super(store, keys, data)
+	}
+
+	async fetchRoles() {
+		if(!this.guildRoles) {
+			var guild = this.store.bot.guilds.resolve(this.server_id);
+			var groles = await guild.roles.fetch();
+			this.guildRoles = this.roles.map(r => groles.cache.find(rl => r == rl.id)).filter(x => x);
+			if(this.roles.length > this.guildRoles.length) {
+				this.roles = this.guildRoles.map(r => r.id);
+				await this.save();
+			}
+		}
+
+		return this.guildRoles;
+	}
+}
+
+class BundleStore extends DataStore {
 	constructor(bot, db) {
 		super();
 
@@ -8,27 +39,39 @@ class BundleStore extends Collection {
 		this.bot = bot;
 	};
 
+	async init() {
+		await this.db.query(`
+			CREATE TABLE IF NOT EXISTS bundles (
+		    	id 				SERIAL PRIMARY KEY,
+		    	hid 			TEXT,
+		    	server_id		TEXT,
+		    	name 			TEXT,
+		    	description 	TEXT,
+		    	roles 			TEXT[],
+		    	assignable		BOOLEAN,
+		    	pass 			TEXT
+		    );
+		`);
+	}
+
 	async create(server, data = {}) {
-		return new Promise(async (res, rej) => {
-			var hid = this.bot.utils.genCode();
-			try {
-				await this.db.query(`INSERT INTO bundles (
-					hid,
-					server_id,
-					name,
-					description,
-					roles,
-					assignable,
-					pass
-				) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-				[hid, server, data.name, data.description, data.roles || [], data.assignable || false, data.pass]);
-			} catch(e) {
-				console.log(e);
-		 		return rej(e.message);
-			}
-			
-			res(await this.get(server, hid));
-		})
+		try {
+			var c = await this.db.query(`INSERT INTO bundles (
+				server_id,
+				name,
+				description,
+				roles,
+				assignable,
+				pass
+			) VALUES (find_unique('bundles'), $1, $2, $3, $4, $5, $6)
+			RETURNING id`,
+			[server, data.name, data.description, data.roles || [], data.assignable || false, data.pass]);
+		} catch(e) {
+			console.log(e);
+	 		return rej(e.message);
+		}
+		
+		return await this.getID(c.rows[0].id);
 	}
 
 	async index(server, data = {}) {
@@ -54,27 +97,31 @@ class BundleStore extends Collection {
 	}
 
 	async get(server, hid) {
-		return new Promise(async (res, rej) => {
-			try {
-				var data = await this.db.query(`SELECT * FROM bundles WHERE server_id = $1 AND hid = $2`,[server, hid]);
-			} catch(e) {
-				console.log(e);
-				return rej(e.message);
-			}
-			
-			if(data.rows && data.rows[0]) {
-				var bundle = data.rows[0];
-				bundle.raw_roles = bundle.roles;
-				var guild = this.bot.guilds.resolve(server);
-				var groles = await guild.roles.fetch();
-				bundle.roles = bundle.roles.map(r => groles.cache.find(rl => r == rl.id)).filter(x => x);
-				if(bundle.raw_roles.length > bundle.roles.length) {
-					bundle.raw_roles = bundle.roles.map(r => r.id);
-					await this.update(server, hid, {roles: bundle.raw_roles});
-				}
-				res(bundle)
-			} else res(undefined);
-		})
+		try {
+			var data = await this.db.query(`SELECT * FROM bundles WHERE server_id = $1 AND hid = $2`,[server, hid]);
+		} catch(e) {
+			console.log(e);
+			return rej(e.message);
+		}
+		
+		if(data.rows && data.rows[0]) {
+			var bundle = new Bundle(this, KEYS, data.rows[0]);
+			await bundle.fetchRoles();
+
+			return bundle;
+		} else return new Bundle(this, KEYS, { server_id: server });
+	}
+
+	async getID(id) {
+		try {
+			var data = await this.db.query(`SELECT * FROM bundles WHERE id = $1`,[id]);
+		} catch(e) {
+			console.log(e);
+			return rej(e.message);
+		}
+		
+		if(data.rows && data.rows[0]) new Bundle(this, KEYS, data.rows[0]);
+		else return new Bundle(this, KEYS, { });
 	}
 
 	async getByRole(server, role) {
